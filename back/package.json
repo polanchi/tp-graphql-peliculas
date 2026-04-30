@@ -1,0 +1,18 @@
+{
+  "name": "tp-graphql-peliculas-backend",
+  "version": "1.0.0",
+  "description": "Backend GraphQL - Catálogo de Películas",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["graphql", "apollo", "peliculas"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@apollo/server": "^5.5.0",
+    "graphql": "^16.13.2"
+  }
+}
