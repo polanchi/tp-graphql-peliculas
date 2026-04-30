@@ -4,7 +4,7 @@
   "description": "Frontend - Catálogo de Películas",
   "type": "module",
   "scripts": {
-    "start": "python -m http.server 5500",
+    "start": "npx http-server . -p 5500",
     "start:node": "npx http-server . -p 5500"
   },
   "keywords": ["frontend", "peliculas"],
