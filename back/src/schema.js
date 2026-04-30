@@ -1,25 +1,17 @@
-// Schema GraphQL
-export const typeDefs = `#graphql
+import { directoresTypeDefs } from "./entities/directores.js";
+import { rolesTypeDefs } from "./entities/roles.js";
+import { usuariosTypeDefs } from "./entities/usuarios.js";
+import { peliculasTypeDefs } from "./entities/peliculas.js";
 
-  type Director {
-    id: ID!
-    nombre: String!
-  }
-
-  type Pelicula {
-    id: ID!
-    titulo: String!
-    anio: Int!
-    genero: String!
-    director: Director!
-  }
-
-  type Query {
-    peliculas: [Pelicula]
-    pelicula(id: ID!): Pelicula
-  }
-
-  type Mutation {
-    agregarPelicula(titulo: String!, anio: Int!, genero: String!, directorId: ID!): Pelicula
-  }
+const rootTypeDefs = `#graphql
+  type Query
+  type Mutation
 `;
+
+export const typeDefs = [
+  rootTypeDefs,
+  directoresTypeDefs,
+  rolesTypeDefs,
+  usuariosTypeDefs,
+  peliculasTypeDefs,
+];

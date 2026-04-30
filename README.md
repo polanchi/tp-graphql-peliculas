@@ -9,6 +9,7 @@ Este es un trabajo práctico sobre GraphQL que implementa un catálogo de pelíc
 ## Requisitos Previos
 
 - **Node.js** (versión 18 o superior) con npm
+- **PostgreSQL** instalado y disponible en localhost
 - **Navegador moderno** (Chrome, Firefox, Edge, Safari)
 
 ### Instalar Node.js
@@ -21,6 +22,39 @@ Este es un trabajo práctico sobre GraphQL que implementa un catálogo de pelíc
    npm --version
    ```
 
+## Configuración de la Base de Datos
+
+El backend usa PostgreSQL con estas credenciales fijas:
+
+- Usuario: `interfaces-gq`
+- Contraseña: `interfaces-gq`
+- Base de datos: `interfaces-gq`
+- Host: `localhost`
+- Puerto: `5432`
+
+El archivo de inicialización está disponible en `back/init.sql`.
+
+Para crear la base y cargar datos de ejemplo, ejecuta:
+
+```powershell
+cd back
+psql -U interfaces-gq -h localhost -d interfaces-gq -f init.sql
+```
+
+Si aún no existe la base de datos, usa:
+
+```powershell
+createdb -U interfaces-gq interfaces-gq
+```
+
+Si no puedes usar `createdb`, crea la base desde `psql`:
+
+```sql
+CREATE DATABASE "interfaces-gq";
+```
+
+---
+
 ## Estructura del Proyecto
 
 ```
@@ -29,10 +63,15 @@ tp-graphql-peliculas/
 │   ├── package.json
 │   ├── server.js           # Punto de entrada
 │   └── src/
-│       ├── config.js       # Configuración (puerto, opciones)
-│       ├── schema.js       # Esquema GraphQL (tipos, queries, mutations)
-│       ├── resolvers.js    # Resolvers (lógica de las queries/mutations)
-│       └── data.js         # Datos mockados
+│       ├── config.js       # Configuración (puerto, opciones, Postgres)
+│       ├── db.js           # Cliente PostgreSQL y función query
+│       ├── schema.js       # Esquema GraphQL principal
+│       ├── resolvers.js    # Resolvers principales
+│       ├── entities/       # Módulos por entidad
+│       │   ├── directores.js
+│       │   ├── peliculas.js
+│       │   ├── roles.js
+│       │   └── usuarios.js
 │
 └── front/                   # Cliente web
     ├── package.json
@@ -243,24 +282,33 @@ type Mutation {
 
 **`src/schema.js`**
 - Define el esquema GraphQL completo
-- Tipos: Director, Pelicula
-- Query: peliculas, pelicula
-- Mutation: agregarPelicula
+- Tipos: Director, Pelicula, Usuario, Rol
+- Query: peliculas, pelicula, directores, usuario, usuarios, roles
+- Mutation: agregarPelicula, agregarUsuario
 
 **`src/resolvers.js`**
-- Lógica de las queries y mutations
-- Implementa búsquedas por ID
-- Resuelve relaciones (Director)
-- Agrega nuevas películas
+- Lógica principal de resolvers
+- Importa resolvers por entidad
+- Agrega búsquedas por ID
+- Resuelve relaciones (Director, Rol)
+- Agrega nuevas películas y usuarios
 
-**`src/data.js`**
-- Almacenamiento en memoria
-- 3 directores iniciales
-- 3 películas iniciales
+**`src/db.js`**
+- Cliente PostgreSQL con `pg`
+- Función `query()` reutilizable
 
 **`src/config.js`**
 - Configuración del puerto (4000)
 - Opciones de escucha
+- Credenciales de conexión a PostgreSQL
+
+**`src/entities/`**
+- Módulos separados por entidad
+- `peliculas.js`, `directores.js`, `usuarios.js`, `roles.js`
+- Tipos y resolvers específicos de cada entidad
+
+**`back/init.sql`**
+- Script SQL para crear tablas y cargar datos iniciales
 
 ### Frontend (`front/`)
 
