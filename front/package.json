@@ -1,0 +1,13 @@
+{
+  "name": "tp-graphql-peliculas-frontend",
+  "version": "1.0.0",
+  "description": "Frontend - Catálogo de Películas",
+  "type": "module",
+  "scripts": {
+    "start": "npx http-server . -p 5500",
+    "start:node": "npx http-server . -p 5500"
+  },
+  "keywords": ["frontend", "peliculas"],
+  "author": "",
+  "license": "ISC"
+}
