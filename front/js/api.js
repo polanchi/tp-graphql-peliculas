@@ -181,6 +181,18 @@ export async function obtenerDirectores() {
   return data.directores;
 }
 
+export async function crearDirector({ nombre }) {
+  const query = `
+    mutation AgregarDirector($nombre: String!) {
+      agregarDirector(nombre: $nombre) {
+        id nombre
+      }
+    }
+  `;
+  const data = await ejecutarConsulta(query, { nombre });
+  return data.agregarDirector;
+}
+
 export async function crearPelicula({ titulo, anio, genero, directorId }) {
   const query = `
     mutation Agregar($titulo: String!, $anio: Int!, $genero: String!, $directorId: ID!) {

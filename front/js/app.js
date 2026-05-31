@@ -401,9 +401,13 @@ async function manejarRegistro(e) {
 
 /* ============================ Admin ============================ */
 function aplicarPermisosAdmin() {
-  // El botón "Agregar película" solo está disponible para administradores.
+  // Los botones de administración solo están disponibles para administradores.
   $("#btn-abrir-agregar").classList.toggle("hidden", !esAdmin());
-  if (!esAdmin()) cerrarModal("modal-agregar");
+  $("#btn-abrir-agregar-director").classList.toggle("hidden", !esAdmin());
+  if (!esAdmin()) {
+    cerrarModal("modal-agregar");
+    cerrarModal("modal-agregar-director");
+  }
 }
 
 async function manejarAgregarPelicula(e) {
@@ -429,6 +433,25 @@ async function manejarAgregarPelicula(e) {
   }
 }
 
+async function manejarAgregarDirector(e) {
+  e.preventDefault();
+  const msg = $("#agregar-director-msg");
+  msg.textContent = "";
+  const nombre = $("#director-nombre").value.trim();
+  if (!nombre) {
+    msg.textContent = "Ingresá el nombre del director.";
+    return;
+  }
+  try {
+    await api.crearDirector({ nombre });
+    $("#form-agregar-director").reset();
+    cerrarModal("modal-agregar-director");
+    await cargarFiltros();
+  } catch (error) {
+    msg.textContent = "Error al agregar el director: " + error.message;
+  }
+}
+
 /* ============================ Init ============================ */
 function conectarEventosGlobales() {
   // Cerrar modales (botón × y click en overlay)
@@ -449,7 +472,9 @@ function conectarEventosGlobales() {
   $("#form-login").addEventListener("submit", manejarLogin);
   $("#form-registro").addEventListener("submit", manejarRegistro);
   $("#form-agregar").addEventListener("submit", manejarAgregarPelicula);
+  $("#form-agregar-director").addEventListener("submit", manejarAgregarDirector);
   $("#btn-abrir-agregar").addEventListener("click", () => abrirModal("modal-agregar"));
+  $("#btn-abrir-agregar-director").addEventListener("click", () => abrirModal("modal-agregar-director"));
   $("#btn-volver-catalogo").addEventListener("click", mostrarCatalogo);
   $("#logo-home").addEventListener("click", () => {
     mostrarCatalogo();

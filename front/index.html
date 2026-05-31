@@ -63,6 +63,7 @@
           <h2>Películas</h2>
           <span class="pill-count" id="pill-count">0 resultados</span>
           <button class="btn btn-sm hidden" id="btn-abrir-agregar">+ Agregar película</button>
+          <button class="btn btn-sm hidden" id="btn-abrir-agregar-director">+ Agregar director</button>
         </div>
 
         <div class="grid-peliculas" id="grid-peliculas"></div>
@@ -143,6 +144,22 @@
           </div>
           <button type="submit" class="btn btn-block">Agregar película</button>
           <p class="auth-msg" id="agregar-msg"></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- ====================== MODAL AGREGAR DIRECTOR (admin) ====================== -->
+    <div class="modal-overlay hidden" id="modal-agregar-director">
+      <div class="modal">
+        <button class="modal-close" data-close="modal-agregar-director">×</button>
+        <h2 class="modal-titulo">Agregar director <span class="badge-admin">admin</span></h2>
+        <form id="form-agregar-director" class="auth-form">
+          <div class="field">
+            <label>Nombre</label>
+            <input type="text" id="director-nombre" placeholder="Ej: Christopher Nolan" required />
+          </div>
+          <button type="submit" class="btn btn-block">Agregar director</button>
+          <p class="auth-msg" id="agregar-director-msg"></p>
         </form>
       </div>
     </div>

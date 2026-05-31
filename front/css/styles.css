@@ -223,6 +223,7 @@ tbody tr:hover { background: #141418; }
 .btn:hover { background: #9333ea; }
 .btn-block { width: 100%; }
 .btn-sm { padding: 7px 12px; font-size: 13px; margin-left: auto; }
+.section-header .btn-sm + .btn-sm { margin-left: 0; }
 
 .modal-titulo { color: #fff; font-size: 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
 
