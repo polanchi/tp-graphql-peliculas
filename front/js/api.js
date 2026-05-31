@@ -3,123 +3,259 @@
  */
 
 const GRAPHQL_URL = "http://localhost:4000/";
+const TOKEN_KEY = "peliculas_token";
 
-/**
- * Realiza una consulta GraphQL al servidor
- * @param {string} query - La consulta GraphQL
- * @returns {Promise<Object>} Los datos de la respuesta
- */
-async function ejecutarConsulta(query) {
-  try {
-    const respuesta = await fetch(GRAPHQL_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ query }),
-    });
+export function guardarToken(token) {
+  localStorage.setItem(TOKEN_KEY, token);
+}
 
-    if (!respuesta.ok) {
-      throw new Error(`Error HTTP: ${respuesta.status}`);
-    }
+export function obtenerToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
 
-    const resultado = await respuesta.json();
-
-    if (resultado.errors) {
-      console.error("Error GraphQL:", resultado.errors);
-      throw new Error(resultado.errors[0].message);
-    }
-
-    return resultado.data;
-  } catch (error) {
-    console.error("Error en consulta GraphQL:", error);
-    throw error;
-  }
+export function borrarToken() {
+  localStorage.removeItem(TOKEN_KEY);
 }
 
 /**
- * Obtiene todas las películas con su información de director
- * @returns {Promise<Array>} Lista de películas
+ * Ejecuta una operación GraphQL (query o mutation) con variables.
+ * @param {string} query - La operación GraphQL
+ * @param {Object} variables - Variables de la operación
+ * @returns {Promise<Object>} Los datos de la respuesta
  */
-export async function obtenerPeliculas() {
+async function ejecutarConsulta(query, variables = {}) {
+  const headers = { "Content-Type": "application/json" };
+  const token = obtenerToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const respuesta = await fetch(GRAPHQL_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ query, variables }),
+  });
+
+  if (!respuesta.ok) {
+    throw new Error(`Error HTTP: ${respuesta.status}`);
+  }
+
+  const resultado = await respuesta.json();
+
+  if (resultado.errors) {
+    throw new Error(resultado.errors[0].message);
+  }
+
+  return resultado.data;
+}
+
+/* ----------------------- Autenticación ----------------------- */
+
+export async function registrar({ nombre, email, password }) {
+  const query = `
+    mutation Registrar($nombre: String!, $email: String!, $password: String!) {
+      registrar(nombre: $nombre, email: $email, password: $password) {
+        token
+        usuario { id nombre email rol { nombre } }
+      }
+    }
+  `;
+  const data = await ejecutarConsulta(query, { nombre, email, password });
+  return data.registrar;
+}
+
+export async function login({ email, password }) {
+  const query = `
+    mutation Login($email: String!, $password: String!) {
+      login(email: $email, password: $password) {
+        token
+        usuario { id nombre email rol { nombre } }
+      }
+    }
+  `;
+  const data = await ejecutarConsulta(query, { email, password });
+  return data.login;
+}
+
+export async function obtenerMe() {
   const query = `
     query {
-      peliculas {
+      me {
         id
-        titulo
-        anio
-        genero
-        director {
+        nombre
+        email
+        bio
+        rol { nombre }
+        cantidadComentarios
+        cantidadCalificaciones
+        comentarios {
           id
-          nombre
+          texto
+          creadoEn
+          pelicula { id titulo }
+        }
+        calificaciones {
+          id
+          estrellas
+          pelicula { id titulo }
         }
       }
     }
   `;
-
   const data = await ejecutarConsulta(query);
+  return data.me;
+}
+
+export async function actualizarPerfil({ nombre, bio }) {
+  const query = `
+    mutation ActualizarPerfil($nombre: String, $bio: String) {
+      actualizarPerfil(nombre: $nombre, bio: $bio) {
+        id nombre bio
+      }
+    }
+  `;
+  const data = await ejecutarConsulta(query, { nombre, bio });
+  return data.actualizarPerfil;
+}
+
+/* ----------------------- Películas ----------------------- */
+
+const CAMPOS_PELICULA = `
+  id
+  titulo
+  anio
+  genero
+  director { id nombre }
+  promedioEstrellas
+  cantidadVotos
+  miCalificacion
+  cantidadLikes
+  meGusta
+  cantidadComentarios
+`;
+
+export async function obtenerPeliculas({ busqueda, genero, directorId, ordenarPor } = {}) {
+  const query = `
+    query Peliculas($busqueda: String, $genero: String, $directorId: ID, $ordenarPor: OrdenPelicula) {
+      peliculas(busqueda: $busqueda, genero: $genero, directorId: $directorId, ordenarPor: $ordenarPor) {
+        ${CAMPOS_PELICULA}
+      }
+    }
+  `;
+  const data = await ejecutarConsulta(query, {
+    busqueda: busqueda || null,
+    genero: genero || null,
+    directorId: directorId || null,
+    ordenarPor: ordenarPor || null,
+  });
   return data.peliculas;
 }
 
-/**
- * Obtiene una película específica por ID
- * @param {string} id - ID de la película
- * @returns {Promise<Object>} Datos de la película
- */
 export async function obtenerPeliculaPorId(id) {
   const query = `
-    query {
-      pelicula(id: "${id}") {
-        id
-        titulo
-        anio
-        genero
-        director {
+    query Pelicula($id: ID!) {
+      pelicula(id: $id) {
+        ${CAMPOS_PELICULA}
+        comentarios {
           id
-          nombre
+          texto
+          creadoEn
+          cantidadLikes
+          meGusta
+          usuario { id nombre rol { nombre } }
         }
       }
     }
   `;
-
-  const data = await ejecutarConsulta(query);
+  const data = await ejecutarConsulta(query, { id });
   return data.pelicula;
 }
 
-/**
- * Agrega una nueva película
- * @param {Object} params - Parámetros de la película
- * @param {string} params.titulo - Título de la película
- * @param {number} params.anio - Año de la película
- * @param {string} params.genero - Género de la película
- * @param {string} params.directorId - ID del director
- * @returns {Promise<Object>} Datos de la película creada
- */
-export async function crearPelicula({ titulo, anio, genero, directorId }) {
-  // Sanitizar entrada para evitar inyecciones
-  const tituloPuro = titulo.replace(/"/g, '\\"');
-  const generoPuro = genero.replace(/"/g, '\\"');
+export async function obtenerGeneros() {
+  const data = await ejecutarConsulta(`query { generos }`);
+  return data.generos;
+}
 
+export async function obtenerDirectores() {
+  const data = await ejecutarConsulta(`query { directores { id nombre } }`);
+  return data.directores;
+}
+
+export async function crearPelicula({ titulo, anio, genero, directorId }) {
   const query = `
-    mutation {
-      agregarPelicula(
-        titulo: "${tituloPuro}"
-        anio: ${anio}
-        genero: "${generoPuro}"
-        directorId: "${directorId}"
-      ) {
-        id
-        titulo
-        anio
-        genero
-        director {
-          id
-          nombre
-        }
+    mutation Agregar($titulo: String!, $anio: Int!, $genero: String!, $directorId: ID!) {
+      agregarPelicula(titulo: $titulo, anio: $anio, genero: $genero, directorId: $directorId) {
+        id titulo
       }
     }
   `;
-
-  const data = await ejecutarConsulta(query);
+  const data = await ejecutarConsulta(query, { titulo, anio, genero, directorId });
   return data.agregarPelicula;
+}
+
+export async function eliminarPelicula(id) {
+  const query = `mutation Eliminar($id: ID!) { eliminarPelicula(id: $id) }`;
+  const data = await ejecutarConsulta(query, { id });
+  return data.eliminarPelicula;
+}
+
+export async function calificarPelicula({ peliculaId, estrellas }) {
+  const query = `
+    mutation Calificar($peliculaId: ID!, $estrellas: Int!) {
+      calificarPelicula(peliculaId: $peliculaId, estrellas: $estrellas) {
+        id promedioEstrellas cantidadVotos miCalificacion
+      }
+    }
+  `;
+  const data = await ejecutarConsulta(query, { peliculaId, estrellas });
+  return data.calificarPelicula;
+}
+
+export async function toggleLikePelicula(peliculaId) {
+  const query = `
+    mutation Like($peliculaId: ID!) {
+      toggleLikePelicula(peliculaId: $peliculaId) {
+        id cantidadLikes meGusta
+      }
+    }
+  `;
+  const data = await ejecutarConsulta(query, { peliculaId });
+  return data.toggleLikePelicula;
+}
+
+/* ----------------------- Comentarios ----------------------- */
+
+export async function agregarComentario({ peliculaId, texto }) {
+  const query = `
+    mutation Comentar($peliculaId: ID!, $texto: String!) {
+      agregarComentario(peliculaId: $peliculaId, texto: $texto) {
+        id
+        texto
+        creadoEn
+        cantidadLikes
+        meGusta
+        usuario { id nombre rol { nombre } }
+      }
+    }
+  `;
+  const data = await ejecutarConsulta(query, { peliculaId, texto });
+  return data.agregarComentario;
+}
+
+export async function eliminarComentario(id) {
+  const query = `mutation EliminarComentario($id: ID!) { eliminarComentario(id: $id) }`;
+  const data = await ejecutarConsulta(query, { id });
+  return data.eliminarComentario;
+}
+
+export async function toggleLikeComentario(comentarioId) {
+  const query = `
+    mutation LikeComentario($comentarioId: ID!) {
+      toggleLikeComentario(comentarioId: $comentarioId) {
+        id cantidadLikes meGusta
+      }
+    }
+  `;
+  const data = await ejecutarConsulta(query, { comentarioId });
+  return data.toggleLikeComentario;
 }

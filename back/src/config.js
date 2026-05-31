@@ -13,3 +13,8 @@ export const DB_CONFIG = {
   database: "interfaces-gq",
 };
 
+// Configuración de autenticación (JWT)
+// En producción esto debería venir de una variable de entorno.
+export const JWT_SECRET = process.env.JWT_SECRET || "cambia-este-secreto-en-produccion";
+export const JWT_EXPIRES_IN = "7d";
+

@@ -3,85 +3,154 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Catálogo de Películas</title>
+    <title>CineSocial · Red social de películas</title>
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
-
     <div class="topbar">
-      <div class="logo">
+      <div class="logo" id="logo-home">
         <div class="logo-dot"></div>
-        <span class="logo-text">Catálogo de Películas</span>
+        <span class="logo-text">CineSocial</span>
       </div>
+      <nav class="nav-auth" id="nav-auth">
+        <!-- Se completa dinámicamente según la sesión -->
+      </nav>
     </div>
 
-    <div class="stats">
-      <div class="stat">
-        <div class="stat-label">Total películas</div>
-        <div class="stat-value" id="total-peliculas">0</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Directores</div>
-        <div class="stat-value">3</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Géneros</div>
-        <div class="stat-value" id="total-generos">0</div>
-      </div>
-    </div>
+    <main class="container">
+      <!-- ====================== CATÁLOGO ====================== -->
+      <section id="vista-catalogo">
+        <div class="hero">
+          <h1>Catálogo de películas</h1>
+          <p>Descubrí, puntuá y comentá. Iniciá sesión para participar.</p>
+        </div>
 
-    <div class="section-header">
-      <h2>Películas</h2>
-      <span class="pill-count" id="pill-count">0 resultados</span>
-    </div>
-
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Título</th>
-            <th>Año</th>
-            <th>Género</th>
-            <th>Director</th>
-          </tr>
-        </thead>
-        <tbody id="lista-peliculas"></tbody>
-      </table>
-    </div>
-
-    <div class="section-header">
-      <h2>Agregar película</h2>
-    </div>
-
-    <div class="form-card">
-      <form id="form-agregar">
-        <div class="form-grid">
-          <div class="field">
-            <label>Título</label>
-            <input type="text" id="titulo" placeholder="Ej: The Dark Knight" required />
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">Total películas</div>
+            <div class="stat-value" id="total-peliculas">0</div>
           </div>
-          <div class="field">
-            <label>Año</label>
-            <input type="number" id="anio" placeholder="Ej: 2008" required />
+          <div class="stat">
+            <div class="stat-label">Directores</div>
+            <div class="stat-value" id="total-directores">0</div>
           </div>
-          <div class="field">
-            <label>Género</label>
-            <input type="text" id="genero" placeholder="Ej: Acción" required />
-          </div>
-          <div class="field">
-            <label>Director</label>
-            <div class="select-wrap">
-              <select id="directorId">
-                <option value="1">Christopher Nolan</option>
-                <option value="2">Francis Ford Coppola</option>
-                <option value="3">Bong Joon-ho</option>
-              </select>
-            </div>
+          <div class="stat">
+            <div class="stat-label">Géneros</div>
+            <div class="stat-value" id="total-generos">0</div>
           </div>
         </div>
-        <button type="submit" class="btn">Agregar película</button>
-      </form>
+
+        <div class="filtros">
+          <input type="search" id="input-busqueda" placeholder="Buscar por título..." />
+          <div class="select-wrap">
+            <select id="select-genero"><option value="">Todos los géneros</option></select>
+          </div>
+          <div class="select-wrap">
+            <select id="select-orden">
+              <option value="">Orden por defecto</option>
+              <option value="TITULO">Título (A-Z)</option>
+              <option value="ANIO">Más recientes</option>
+              <option value="MEJOR_PUNTUADAS">Mejor puntuadas</option>
+              <option value="MAS_COMENTADAS">Más comentadas</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <h2>Películas</h2>
+          <span class="pill-count" id="pill-count">0 resultados</span>
+        </div>
+
+        <div class="grid-peliculas" id="grid-peliculas"></div>
+
+        <!-- Formulario solo para administradores -->
+        <div id="zona-admin" class="hidden">
+          <div class="section-header">
+            <h2>Agregar película <span class="badge-admin">admin</span></h2>
+          </div>
+          <div class="form-card">
+            <form id="form-agregar">
+              <div class="form-grid">
+                <div class="field">
+                  <label>Título</label>
+                  <input type="text" id="titulo" placeholder="Ej: The Dark Knight" required />
+                </div>
+                <div class="field">
+                  <label>Año</label>
+                  <input type="number" id="anio" placeholder="Ej: 2008" required />
+                </div>
+                <div class="field">
+                  <label>Género</label>
+                  <input type="text" id="genero" placeholder="Ej: Acción" required />
+                </div>
+                <div class="field">
+                  <label>Director</label>
+                  <div class="select-wrap">
+                    <select id="directorId"></select>
+                  </div>
+                </div>
+              </div>
+              <button type="submit" class="btn">Agregar película</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================== PERFIL ====================== -->
+      <section id="vista-perfil" class="hidden">
+        <button class="btn-volver" id="btn-volver-catalogo">← Volver al catálogo</button>
+        <div class="perfil-card" id="perfil-contenido"></div>
+      </section>
+    </main>
+
+    <!-- ====================== MODAL AUTH ====================== -->
+    <div class="modal-overlay hidden" id="modal-auth">
+      <div class="modal">
+        <button class="modal-close" data-close="modal-auth">×</button>
+        <div class="tabs">
+          <button class="tab active" data-tab="login">Ingresar</button>
+          <button class="tab" data-tab="registro">Registrarse</button>
+        </div>
+
+        <form id="form-login" class="auth-form">
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="login-email" placeholder="tu@email.com" required />
+          </div>
+          <div class="field">
+            <label>Contraseña</label>
+            <input type="password" id="login-password" placeholder="••••••" required />
+          </div>
+          <button type="submit" class="btn btn-block">Ingresar</button>
+          <p class="auth-msg" id="login-msg"></p>
+          <p class="hint">Demo admin: admin@local / admin123</p>
+        </form>
+
+        <form id="form-registro" class="auth-form hidden">
+          <div class="field">
+            <label>Nombre</label>
+            <input type="text" id="reg-nombre" placeholder="Tu nombre" required />
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="reg-email" placeholder="tu@email.com" required />
+          </div>
+          <div class="field">
+            <label>Contraseña</label>
+            <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" required />
+          </div>
+          <button type="submit" class="btn btn-block">Crear cuenta</button>
+          <p class="auth-msg" id="registro-msg"></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- ====================== MODAL DETALLE ====================== -->
+    <div class="modal-overlay hidden" id="modal-detalle">
+      <div class="modal modal-lg">
+        <button class="modal-close" data-close="modal-detalle">×</button>
+        <div id="detalle-contenido"></div>
+      </div>
     </div>
 
     <script type="module" src="js/app.js"></script>

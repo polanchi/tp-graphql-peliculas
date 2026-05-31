@@ -28,7 +28,48 @@ CREATE TABLE IF NOT EXISTS usuarios (
   id SERIAL PRIMARY KEY,
   nombre VARCHAR(100) NOT NULL,
   email VARCHAR(200) NOT NULL UNIQUE,
+  password_hash VARCHAR(255),
+  bio TEXT,
   rol_id INT NOT NULL REFERENCES roles(id)
+);
+
+-- Para bases ya existentes (agrega columnas nuevas sin romper datos)
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bio TEXT;
+
+-- Comentarios de usuarios sobre películas
+CREATE TABLE IF NOT EXISTS comentarios (
+  id SERIAL PRIMARY KEY,
+  texto TEXT NOT NULL,
+  usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  pelicula_id INT NOT NULL REFERENCES peliculas(id) ON DELETE CASCADE,
+  creado_en TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Calificaciones con estrellas (1 a 5). Un voto por usuario y película.
+CREATE TABLE IF NOT EXISTS calificaciones (
+  id SERIAL PRIMARY KEY,
+  estrellas INT NOT NULL CHECK (estrellas BETWEEN 1 AND 5),
+  usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  pelicula_id INT NOT NULL REFERENCES peliculas(id) ON DELETE CASCADE,
+  creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE (usuario_id, pelicula_id)
+);
+
+-- Likes a películas (uno por usuario y película)
+CREATE TABLE IF NOT EXISTS pelicula_likes (
+  usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  pelicula_id INT NOT NULL REFERENCES peliculas(id) ON DELETE CASCADE,
+  creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (usuario_id, pelicula_id)
+);
+
+-- Likes a comentarios (uno por usuario y comentario)
+CREATE TABLE IF NOT EXISTS comentario_likes (
+  usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  comentario_id INT NOT NULL REFERENCES comentarios(id) ON DELETE CASCADE,
+  creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (usuario_id, comentario_id)
 );
 
 INSERT INTO roles (nombre)
@@ -49,8 +90,11 @@ VALUES
   ('Parasite', 2019, 'Thriller', 3)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO usuarios (nombre, email, rol_id)
+-- Usuarios de ejemplo (las contraseñas están hasheadas con bcrypt)
+-- admin@local  -> contraseña: admin123  (rol admin)
+-- user@local   -> contraseña: user123   (rol usuario)
+INSERT INTO usuarios (nombre, email, password_hash, rol_id)
 VALUES
-  ('Admin', 'admin@local', 1),
-  ('Invitado', 'invitado@local', 3)
-ON CONFLICT DO NOTHING;
+  ('Admin', 'admin@local', '$2b$10$uxQqD/iWatbEWZdQ1IIzw.JZbxLd1.9kArKOj9Kj4xN4W8.lIT5ua', 1),
+  ('Usuario Demo', 'user@local', '$2b$10$RQMbq84NHotjwgaKymQC0ezXnEKHVwlBb8ZDwo8ydFx2kwNFvFyza', 3)
+ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash;

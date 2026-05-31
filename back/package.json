@@ -8,12 +8,18 @@
     "start": "node server.js",
     "dev": "node --watch server.js"
   },
-  "keywords": ["graphql", "apollo", "peliculas"],
+  "keywords": [
+    "graphql",
+    "apollo",
+    "peliculas"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@apollo/server": "^5.5.0",
+    "bcryptjs": "^3.0.3",
     "graphql": "^16.13.2",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.11.0"
   }
 }

@@ -1,10 +1,22 @@
-# Catálogo de Películas - GraphQL con Apollo Server
+# CineSocial - Red social de películas (GraphQL con Apollo Server)
 
 ## Descripción del Proyecto
 
-Este es un trabajo práctico sobre GraphQL que implementa un catálogo de películas con:
-- **Backend**: Servidor GraphQL con Apollo Server
+Este es un trabajo práctico sobre GraphQL que implementa una **red social de películas** con:
+- **Backend**: Servidor GraphQL con Apollo Server + PostgreSQL
 - **Frontend**: Cliente web que consume el API con HTML, CSS y JavaScript puro
+- **Autenticación**: registro y login con JWT (contraseñas hasheadas con bcrypt)
+- **Roles**: solo los administradores pueden cargar/eliminar películas
+- **Social**: comentarios, puntuación con estrellas (1-5), likes a películas y comentarios, perfil de usuario, búsqueda y filtros
+
+### Cuentas de ejemplo (tras ejecutar `init.sql`)
+
+| Rol | Email | Contraseña |
+|---|---|---|
+| admin | `admin@local` | `admin123` |
+| usuario | `user@local` | `user123` |
+
+> Cualquier persona puede navegar el catálogo sin loguearse. Para comentar y puntuar hay que iniciar sesión. Para cargar películas hay que ser **admin**.
 
 ## Requisitos Previos
 
@@ -32,7 +44,10 @@ El backend usa PostgreSQL con estas credenciales fijas:
 - Host: `localhost`
 - Puerto: `5432`
 
-El archivo de inicialización está disponible en `back/init.sql`.
+El archivo de inicialización está disponible en `back/init.sql`. Incluye las tablas nuevas
+(`comentarios`, `calificaciones`, `pelicula_likes`, `comentario_likes`) y columnas nuevas
+(`usuarios.password_hash`, `usuarios.bio`). El script es **idempotente**: podés correrlo sobre una
+base existente y solo agrega lo que falte (usa `CREATE TABLE IF NOT EXISTS` y `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`).
 
 Para crear la base y cargar datos de ejemplo, ejecuta:
 
@@ -40,6 +55,9 @@ Para crear la base y cargar datos de ejemplo, ejecuta:
 cd back
 psql -U interfaces-gq -h localhost -d interfaces-gq -f init.sql
 ```
+
+> **Importante**: si ya tenías la base de una versión anterior, volvé a correr `init.sql` para
+> aplicar la migración. De lo contrario verás errores como `column "bio" does not exist`.
 
 Si aún no existe la base de datos, usa:
 
@@ -219,44 +237,88 @@ Después de agregar, la película aparece inmediatamente en la tabla y se actual
 
 ## Esquema GraphQL
 
-### Tipos
+### Tipos principales
 
 ```graphql
-type Director {
-  id: ID!
-  nombre: String!
-}
-
 type Pelicula {
   id: ID!
   titulo: String!
   anio: Int!
   genero: String!
   director: Director!
+  comentarios: [Comentario!]!
+  cantidadComentarios: Int!
+  promedioEstrellas: Float!
+  cantidadVotos: Int!
+  miCalificacion: Int        # estrellas que puso el usuario logueado
+  cantidadLikes: Int!
+  meGusta: Boolean!
 }
+
+type Usuario {
+  id: ID!
+  nombre: String!
+  email: String!
+  bio: String
+  rol: Rol!
+  comentarios: [Comentario!]!
+  calificaciones: [Calificacion!]!
+}
+
+type Comentario {
+  id: ID!
+  texto: String!
+  creadoEn: String!
+  usuario: Usuario!
+  pelicula: Pelicula!
+  cantidadLikes: Int!
+  meGusta: Boolean!
+}
+
+type AuthPayload { token: String!  usuario: Usuario! }
 ```
 
 ### Queries (Consultas)
 
 ```graphql
 type Query {
-  peliculas: [Pelicula]        # Obtiene todas las películas
-  pelicula(id: ID!): Pelicula  # Obtiene una película por ID
+  peliculas(busqueda: String, genero: String, directorId: ID, ordenarPor: OrdenPelicula): [Pelicula]
+  pelicula(id: ID!): Pelicula
+  generos: [String!]!
+  me: Usuario                 # usuario logueado (requiere token)
+  usuario(id: ID!): Usuario
 }
+
+enum OrdenPelicula { TITULO  ANIO  MEJOR_PUNTUADAS  MAS_COMENTADAS }
 ```
 
 ### Mutations (Mutaciones)
 
 ```graphql
 type Mutation {
-  agregarPelicula(
-    titulo: String!
-    anio: Int!
-    genero: String!
-    directorId: ID!
-  ): Pelicula  # Agrega una nueva película
+  # Auth
+  registrar(nombre: String!, email: String!, password: String!): AuthPayload!
+  login(email: String!, password: String!): AuthPayload!
+  actualizarPerfil(nombre: String, bio: String): Usuario!
+
+  # Películas (agregar/eliminar: solo admin)
+  agregarPelicula(titulo: String!, anio: Int!, genero: String!, directorId: ID!): Pelicula
+  eliminarPelicula(id: ID!): Boolean!
+  toggleLikePelicula(peliculaId: ID!): Pelicula!
+
+  # Social (requiere login)
+  calificarPelicula(peliculaId: ID!, estrellas: Int!): Pelicula!
+  agregarComentario(peliculaId: ID!, texto: String!): Comentario!
+  eliminarComentario(id: ID!): Boolean!
+  toggleLikeComentario(comentarioId: ID!): Comentario!
 }
 ```
+
+### Autenticación
+
+El login/registro devuelven un **token JWT**. El frontend lo guarda en `localStorage` y lo envía
+en cada request en el header `Authorization: Bearer <token>`. El servidor lo decodifica en el
+`context` de Apollo y expone el usuario actual a los resolvers.
 
 ## Tecnologías Utilizadas
 
@@ -264,6 +326,9 @@ type Mutation {
 - **Node.js**: Runtime de JavaScript
 - **Apollo Server**: Servidor GraphQL standalone
 - **GraphQL**: Lenguaje de queries
+- **PostgreSQL** (`pg`): Base de datos
+- **bcryptjs**: Hash de contraseñas
+- **jsonwebtoken**: Tokens JWT para la sesión
 
 ### Frontend
 - **HTML5**: Estructura semántica

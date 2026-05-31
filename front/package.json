@@ -4,8 +4,8 @@
   "description": "Frontend - Catálogo de Películas",
   "type": "module",
   "scripts": {
-    "start": "npx http-server . -p 5500",
-    "start:node": "npx http-server . -p 5500"
+    "start": "npx http-server . -p 5500 -c-1",
+    "start:node": "npx http-server . -p 5500 -c-1"
   },
   "keywords": ["frontend", "peliculas"],
   "author": "",
