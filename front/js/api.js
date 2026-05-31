@@ -125,6 +125,7 @@ const CAMPOS_PELICULA = `
   titulo
   anio
   genero
+  poster
   director { id nombre }
   promedioEstrellas
   cantidadVotos
@@ -193,15 +194,15 @@ export async function crearDirector({ nombre }) {
   return data.agregarDirector;
 }
 
-export async function crearPelicula({ titulo, anio, genero, directorId }) {
+export async function crearPelicula({ titulo, anio, genero, directorId, poster }) {
   const query = `
-    mutation Agregar($titulo: String!, $anio: Int!, $genero: String!, $directorId: ID!) {
-      agregarPelicula(titulo: $titulo, anio: $anio, genero: $genero, directorId: $directorId) {
-        id titulo
+    mutation Agregar($titulo: String!, $anio: Int!, $genero: String!, $directorId: ID!, $poster: String) {
+      agregarPelicula(titulo: $titulo, anio: $anio, genero: $genero, directorId: $directorId, poster: $poster) {
+        id titulo poster
       }
     }
   `;
-  const data = await ejecutarConsulta(query, { titulo, anio, genero, directorId });
+  const data = await ejecutarConsulta(query, { titulo, anio, genero, directorId, poster: poster || null });
   return data.agregarPelicula;
 }
 

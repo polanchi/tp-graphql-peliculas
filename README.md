@@ -83,10 +83,12 @@ CREATE DATABASE "interfaces-gq";
 tp-graphql-peliculas/
 ├── back/                    # Servidor GraphQL
 │   ├── package.json
-│   ├── server.js           # Punto de entrada
+│   ├── server.js           # Punto de entrada (Express: GraphQL + estáticos de imágenes)
+│   ├── images/peliculas/   # Posters subidos (guardados en disco)
 │   └── src/
-│       ├── config.js       # Configuración (puerto, opciones, Postgres)
+│       ├── config.js       # Configuración (puerto, opciones, Postgres, imágenes)
 │       ├── db.js           # Cliente PostgreSQL y función query
+│       ├── uploads.js      # Guarda imágenes en disco y arma su URL pública
 │       ├── schema.js       # Esquema GraphQL principal
 │       ├── resolvers.js    # Resolvers principales
 │       ├── entities/       # Módulos por entidad
@@ -249,6 +251,7 @@ type Pelicula {
   titulo: String!
   anio: Int!
   genero: String!
+  poster: String           # URL pública del poster subido (o null si no tiene)
   director: Director!
   comentarios: [Comentario!]!
   cantidadComentarios: Int!
@@ -306,7 +309,8 @@ type Mutation {
   actualizarPerfil(nombre: String, bio: String): Usuario!
 
   # Películas (agregar/eliminar: solo admin)
-  agregarPelicula(titulo: String!, anio: Int!, genero: String!, directorId: ID!): Pelicula
+  # El poster se envía como Data URL en base64 (la imagen real, no un enlace)
+  agregarPelicula(titulo: String!, anio: Int!, genero: String!, directorId: ID!, poster: String): Pelicula
   eliminarPelicula(id: ID!): Boolean!
   toggleLikePelicula(peliculaId: ID!): Pelicula!
 
@@ -318,6 +322,23 @@ type Mutation {
 }
 ```
 
+### Posters de películas (subida de imágenes)
+
+Al cargar una película, un **admin** puede subir el **poster como archivo de imagen real**
+(no un enlace). El flujo es:
+
+1. El frontend lee el archivo y lo convierte a **Data URL en base64**.
+2. Se envía en el argumento `poster` de la mutación `agregarPelicula`.
+3. El backend decodifica la imagen y la **guarda en disco** en `back/images/peliculas/`
+   con su formato original (jpg, png, webp, gif o avif) y un nombre único.
+4. En la base de datos solo se guarda la **ruta relativa** (columna `peliculas.poster`).
+5. Las imágenes se sirven como **archivos estáticos desde el mismo servidor** (puerto 4000)
+   bajo la ruta `http://localhost:4000/images/`, y el campo `poster` de GraphQL devuelve la
+   **URL pública** lista para usar en un `<img>`.
+
+> Formatos aceptados: JPG, PNG, WEBP, GIF y AVIF. Al eliminar una película también se borra
+> su archivo de poster del disco. Las imágenes subidas se ignoran en git (ver `back/.gitignore`).
+
 ### Autenticación
 
 El login/registro devuelven un **token JWT**. El frontend lo guarda en `localStorage` y lo envía
@@ -328,7 +349,8 @@ en cada request en el header `Authorization: Bearer <token>`. El servidor lo dec
 
 ### Backend
 - **Node.js**: Runtime de JavaScript
-- **Apollo Server**: Servidor GraphQL standalone
+- **Express**: Servidor HTTP (GraphQL + estáticos de imágenes en un solo puerto)
+- **Apollo Server**: Servidor GraphQL (middleware sobre Express)
 - **GraphQL**: Lenguaje de queries
 - **PostgreSQL** (`pg`): Base de datos
 - **bcryptjs**: Hash de contraseñas

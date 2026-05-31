@@ -26,8 +26,12 @@ CREATE TABLE IF NOT EXISTS peliculas (
   titulo VARCHAR(200) NOT NULL,
   anio INT NOT NULL,
   genero VARCHAR(100) NOT NULL,
+  poster VARCHAR(255),
   director_id INT NOT NULL REFERENCES directores(id)
 );
+
+-- Para bases ya existentes: ruta relativa al poster guardado en disco.
+ALTER TABLE peliculas ADD COLUMN IF NOT EXISTS poster VARCHAR(255);
 
 CREATE TABLE IF NOT EXISTS usuarios (
   id SERIAL PRIMARY KEY,

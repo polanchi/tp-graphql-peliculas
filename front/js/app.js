@@ -10,6 +10,16 @@ const filtros = { busqueda: "", genero: "", directorId: "", ordenarPor: "" };
 const $ = (sel) => document.querySelector(sel);
 const esAdmin = () => usuarioActual?.rol?.nombre === "admin";
 
+// Lee un archivo de imagen y lo devuelve como Data URL en base64.
+function leerArchivoComoBase64(archivo) {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onload = () => resolve(lector.result);
+    lector.onerror = () => reject(new Error("No se pudo leer la imagen."));
+    lector.readAsDataURL(archivo);
+  });
+}
+
 /* ============================ Sesión ============================ */
 async function cargarSesion() {
   if (!api.obtenerToken()) {
@@ -179,8 +189,11 @@ async function renderizarPeliculas() {
     peliculas.forEach((p) => {
       const card = document.createElement("article");
       card.className = "card-pelicula";
+      const posterHtml = p.poster
+        ? `<div class="card-poster"><img src="${escaparHtml(p.poster)}" alt="${escaparHtml(p.titulo)}" loading="lazy" /></div>`
+        : `<div class="card-poster" style="${getColor(p.genero)}">${getIniciales(p.titulo)}</div>`;
       card.innerHTML = `
-        <div class="card-poster" style="${getColor(p.genero)}">${getIniciales(p.titulo)}</div>
+        ${posterHtml}
         <div class="card-body">
           <h3>${escaparHtml(p.titulo)}</h3>
           <p class="muted">${p.anio} · ${escaparHtml(p.director.nombre)}</p>
@@ -254,9 +267,13 @@ function renderDetalle(p) {
   const cont = $("#detalle-contenido");
   const comentariosHtml = p.comentarios.map(renderComentario).join("");
 
+  const posterDetalleHtml = p.poster
+    ? `<div class="card-poster grande"><img src="${escaparHtml(p.poster)}" alt="${escaparHtml(p.titulo)}" /></div>`
+    : `<div class="card-poster grande" style="${getColor(p.genero)}">${getIniciales(p.titulo)}</div>`;
+
   cont.innerHTML = `
     <div class="detalle-header">
-      <div class="card-poster grande" style="${getColor(p.genero)}">${getIniciales(p.titulo)}</div>
+      ${posterDetalleHtml}
       <div>
         <h2>${escaparHtml(p.titulo)} <span class="muted">(${p.anio})</span></h2>
         <p class="muted">Dirigida por ${escaparHtml(p.director.nombre)}</p>
@@ -433,13 +450,16 @@ async function manejarAgregarPelicula(e) {
   const anio = parseInt($("#anio").value, 10);
   const genero = $("#genero").value.trim();
   const directorId = $("#directorId").value;
+  const archivoPoster = $("#poster").files[0];
   if (!titulo || !anio || !genero || !directorId) {
     msg.textContent = "Completá todos los campos.";
     return;
   }
   try {
-    await api.crearPelicula({ titulo, anio, genero, directorId });
+    const poster = archivoPoster ? await leerArchivoComoBase64(archivoPoster) : null;
+    await api.crearPelicula({ titulo, anio, genero, directorId, poster });
     $("#form-agregar").reset();
+    $("#poster-preview").classList.add("hidden");
     cerrarModal("modal-agregar");
     await cargarFiltros();
     await renderizarPeliculas();
@@ -488,6 +508,22 @@ function conectarEventosGlobales() {
   $("#form-registro").addEventListener("submit", manejarRegistro);
   $("#form-agregar").addEventListener("submit", manejarAgregarPelicula);
   $("#form-agregar-director").addEventListener("submit", manejarAgregarDirector);
+  // Vista previa del poster al elegir una imagen
+  $("#poster").addEventListener("change", async (e) => {
+    const archivo = e.target.files[0];
+    const preview = $("#poster-preview");
+    if (!archivo) {
+      preview.classList.add("hidden");
+      return;
+    }
+    try {
+      preview.src = await leerArchivoComoBase64(archivo);
+      preview.classList.remove("hidden");
+    } catch {
+      preview.classList.add("hidden");
+    }
+  });
+
   $("#btn-abrir-agregar").addEventListener("click", () => abrirModal("modal-agregar"));
   $("#btn-abrir-agregar-director").addEventListener("click", () => abrirModal("modal-agregar-director"));
   $("#btn-volver-catalogo").addEventListener("click", mostrarCatalogo);

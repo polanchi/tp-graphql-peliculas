@@ -1,5 +1,6 @@
 import { query } from "../db.js";
 import { requireAdmin, requireAuth } from "../auth.js";
+import { guardarPoster, eliminarPoster, posterUrl } from "../uploads.js";
 
 export const peliculasTypeDefs = `#graphql
   type Pelicula {
@@ -7,6 +8,7 @@ export const peliculasTypeDefs = `#graphql
     titulo: String!
     anio: Int!
     genero: String!
+    poster: String
     director: Director!
     comentarios: [Comentario!]!
     cantidadComentarios: Int!
@@ -32,14 +34,15 @@ export const peliculasTypeDefs = `#graphql
   }
 
   extend type Mutation {
-    agregarPelicula(titulo: String!, anio: Int!, genero: String!, directorId: ID!): Pelicula
+    "El poster se envía como Data URL en base64 (la imagen real, no un enlace)."
+    agregarPelicula(titulo: String!, anio: Int!, genero: String!, directorId: ID!, poster: String): Pelicula
     eliminarPelicula(id: ID!): Boolean!
     toggleLikePelicula(peliculaId: ID!): Pelicula!
   }
 `;
 
 const SELECT_PELICULA =
-  'SELECT id, titulo, anio, genero, director_id AS "directorId" FROM peliculas';
+  'SELECT id, titulo, anio, genero, poster, director_id AS "directorId" FROM peliculas';
 
 const ORDEN_SQL = {
   TITULO: "p.titulo ASC",
@@ -71,7 +74,7 @@ export const peliculasResolvers = {
       const orden = ORDEN_SQL[ordenarPor] || "p.id ASC";
 
       const result = await query(
-        `SELECT p.id, p.titulo, p.anio, p.genero, p.director_id AS "directorId"
+        `SELECT p.id, p.titulo, p.anio, p.genero, p.poster, p.director_id AS "directorId"
          FROM peliculas p
          LEFT JOIN calificaciones c ON c.pelicula_id = p.id
          LEFT JOIN comentarios com ON com.pelicula_id = p.id
@@ -92,23 +95,30 @@ export const peliculasResolvers = {
     },
   },
   Mutation: {
-    agregarPelicula: async (_, { titulo, anio, genero, directorId }, context) => {
+    agregarPelicula: async (_, { titulo, anio, genero, directorId, poster }, context) => {
       requireAdmin(context);
       const generoValido = await query("SELECT 1 FROM generos WHERE nombre = $1", [genero]);
       if (!generoValido.rows[0]) {
         throw new Error("Género inválido. Elegí uno de la lista de géneros disponibles.");
       }
+      // Si llega una imagen, la guardamos en disco y conservamos su ruta relativa.
+      const posterPath = poster ? await guardarPoster(poster) : null;
       const result = await query(
-        `INSERT INTO peliculas (titulo, anio, genero, director_id)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, titulo, anio, genero, director_id AS "directorId"`,
-        [titulo, anio, genero, directorId]
+        `INSERT INTO peliculas (titulo, anio, genero, director_id, poster)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, titulo, anio, genero, poster, director_id AS "directorId"`,
+        [titulo, anio, genero, directorId, posterPath]
       );
       return result.rows[0];
     },
     eliminarPelicula: async (_, { id }, context) => {
       requireAdmin(context);
+      // Recuperamos el poster para borrar también el archivo del disco.
+      const previa = await query("SELECT poster FROM peliculas WHERE id = $1", [id]);
       await query("DELETE FROM peliculas WHERE id = $1", [id]);
+      if (previa.rows[0]?.poster) {
+        await eliminarPoster(previa.rows[0].poster);
+      }
       return true;
     },
     toggleLikePelicula: async (_, { peliculaId }, context) => {
@@ -133,6 +143,7 @@ export const peliculasResolvers = {
     },
   },
   Pelicula: {
+    poster: (pelicula) => posterUrl(pelicula.poster),
     director: async (pelicula) => {
       const result = await query("SELECT id, nombre FROM directores WHERE id = $1", [pelicula.directorId]);
       return result.rows[0] || null;
