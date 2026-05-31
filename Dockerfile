@@ -28,9 +28,13 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENV NODE_ENV=production
 ENV PORT=4000
-# La app se conecta a la base local incluida en la imagen.
-ENV DATABASE_URL="postgres://interfaces-gq:interfaces-gq@127.0.0.1:5432/interfaces-gq"
-ENV DATABASE_SSL=false
+# La app se conecta a la base local por SOCKET UNIX (no TCP), para que Postgres
+# no exponga ningún puerto y Render rutee el tráfico HTTP siempre a la app.
+ENV PGHOST=/var/run/postgresql
+ENV PGUSER=interfaces-gq
+ENV PGPASSWORD=interfaces-gq
+ENV PGDATABASE=interfaces-gq
+ENV PGPORT=5432
 ENV PGDATA=/var/lib/postgresql/data
 
 EXPOSE 4000

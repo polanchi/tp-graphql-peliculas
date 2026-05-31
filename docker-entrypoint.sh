@@ -7,11 +7,16 @@ PG_BIN="$(ls -d /usr/lib/postgresql/*/bin | head -1)"
 export PATH="$PG_BIN:$PATH"
 
 PGDATA="${PGDATA:-/var/lib/postgresql/data}"
+PG_SOCKET_DIR="/var/run/postgresql"
 
 # Asegura el directorio de datos con el dueño correcto.
 mkdir -p "$PGDATA"
 chown -R postgres:postgres "$PGDATA"
 chmod 700 "$PGDATA"
+
+# Directorio del socket Unix (PostgreSQL no usará TCP).
+mkdir -p "$PG_SOCKET_DIR"
+chown postgres:postgres "$PG_SOCKET_DIR"
 
 # Inicializa el cluster la primera vez (si el volumen está vacío).
 if [ ! -s "$PGDATA/PG_VERSION" ]; then
@@ -24,19 +29,24 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then
   } >> "$PGDATA/pg_hba.conf"
 fi
 
-# Arranca PostgreSQL escuchando solo en localhost.
-echo "[entrypoint] Arrancando PostgreSQL..."
-su postgres -c "$PG_BIN/pg_ctl -D '$PGDATA' -o \"-c listen_addresses='localhost'\" -w start"
+# Arranca PostgreSQL SOLO por socket Unix (sin TCP), así Render no confunde
+# el puerto 5432 con el puerto web de la app.
+echo "[entrypoint] Arrancando PostgreSQL (solo socket Unix)..."
+su postgres -c "$PG_BIN/pg_ctl -D '$PGDATA' -o \"-c listen_addresses='' -c unix_socket_directories='$PG_SOCKET_DIR'\" -w start"
+
+# Conexión de bootstrap como superusuario postgres (ignora los PG* de la app,
+# que apuntan a un rol/base que recién vamos a crear).
+PSQL_ADMIN="psql -U postgres -d postgres"
 
 # Crea el rol y la base de la app si todavía no existen.
-if ! su postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='interfaces-gq'\"" | grep -q 1; then
+if ! su postgres -c "$PSQL_ADMIN -tAc \"SELECT 1 FROM pg_roles WHERE rolname='interfaces-gq'\"" | grep -q 1; then
   echo "[entrypoint] Creando rol interfaces-gq..."
-  su postgres -c "psql -c \"CREATE ROLE \\\"interfaces-gq\\\" LOGIN PASSWORD 'interfaces-gq'\""
+  su postgres -c "$PSQL_ADMIN -c \"CREATE ROLE \\\"interfaces-gq\\\" LOGIN PASSWORD 'interfaces-gq'\""
 fi
 
-if ! su postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='interfaces-gq'\"" | grep -q 1; then
+if ! su postgres -c "$PSQL_ADMIN -tAc \"SELECT 1 FROM pg_database WHERE datname='interfaces-gq'\"" | grep -q 1; then
   echo "[entrypoint] Creando base interfaces-gq..."
-  su postgres -c "psql -c \"CREATE DATABASE \\\"interfaces-gq\\\" OWNER \\\"interfaces-gq\\\"\""
+  su postgres -c "$PSQL_ADMIN -c \"CREATE DATABASE \\\"interfaces-gq\\\" OWNER \\\"interfaces-gq\\\"\""
 fi
 
 # Arranca la app (ejecuta init.sql automáticamente al iniciar).
