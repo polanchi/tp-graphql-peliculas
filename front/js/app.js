@@ -111,12 +111,28 @@ async function mostrarPerfil() {
     cont.innerHTML = `
       <div class="perfil-header">
         <div class="avatar avatar-lg">${getIniciales(perfil.nombre)}</div>
-        <div>
+        <div class="perfil-info">
           <h2>${escaparHtml(perfil.nombre)} ${esAdmin() ? '<span class="badge-admin">admin</span>' : ""}</h2>
           <p class="muted">${escaparHtml(perfil.email)}</p>
           <p>${escaparHtml(perfil.bio || "Sin biografía todavía.")}</p>
         </div>
+        <button class="btn-ghost btn-sm" id="btn-editar-perfil">Editar perfil</button>
       </div>
+      <form id="form-editar-perfil" class="form-editar-perfil hidden">
+        <div class="field">
+          <label for="editar-nombre">Nombre</label>
+          <input id="editar-nombre" type="text" maxlength="100" value="${escaparHtml(perfil.nombre)}" required />
+        </div>
+        <div class="field">
+          <label for="editar-bio">Biografía</label>
+          <textarea id="editar-bio" rows="3" maxlength="500" placeholder="Contanos algo sobre vos...">${escaparHtml(perfil.bio || "")}</textarea>
+        </div>
+        <div class="form-editar-acciones">
+          <button type="submit" class="btn btn-sm">Guardar cambios</button>
+          <button type="button" class="btn-ghost btn-sm" id="btn-cancelar-editar">Cancelar</button>
+        </div>
+        <p class="auth-msg" id="editar-perfil-msg"></p>
+      </form>
       <div class="perfil-stats">
         <div><strong>${perfil.cantidadComentarios}</strong> comentarios</div>
         <div><strong>${perfil.cantidadCalificaciones}</strong> puntuaciones</div>
@@ -132,10 +148,41 @@ async function mostrarPerfil() {
         </div>
       </div>
     `;
+
+    $("#btn-editar-perfil").addEventListener("click", () => {
+      $("#form-editar-perfil").classList.remove("hidden");
+      $("#btn-editar-perfil").classList.add("hidden");
+    });
+    $("#btn-cancelar-editar").addEventListener("click", () => {
+      $("#form-editar-perfil").classList.add("hidden");
+      $("#btn-editar-perfil").classList.remove("hidden");
+      $("#editar-perfil-msg").textContent = "";
+    });
+    $("#form-editar-perfil").addEventListener("submit", manejarEditarPerfil);
+
     $("#vista-catalogo").classList.add("hidden");
     $("#vista-perfil").classList.remove("hidden");
   } catch (error) {
     alert("Error al cargar el perfil: " + error.message);
+  }
+}
+
+async function manejarEditarPerfil(e) {
+  e.preventDefault();
+  const msg = $("#editar-perfil-msg");
+  msg.textContent = "";
+  const nombre = $("#editar-nombre").value.trim();
+  const bio = $("#editar-bio").value.trim();
+  if (!nombre) {
+    msg.textContent = "El nombre no puede estar vacío.";
+    return;
+  }
+  try {
+    await api.actualizarPerfil({ nombre, bio });
+    await mostrarPerfil();
+    renderNavAuth();
+  } catch (error) {
+    msg.textContent = error.message;
   }
 }
 
