@@ -326,7 +326,7 @@ tbody tr:hover { background: #141418; }
   object-fit: cover;
   display: block;
 }
-.card-poster.grande { width: 90px; height: 120px; border-radius: 12px; font-size: 28px; }
+.card-poster.grande { width: 180px; height: 260px; border-radius: 12px; font-size: 48px; flex-shrink: 0; }
 .card-poster.grande img { border-radius: 12px; }
 
 /* Vista previa del poster en el formulario de carga */
