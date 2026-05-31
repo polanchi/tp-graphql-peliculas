@@ -1,0 +1,9 @@
+**/node_modules
+.git
+.gitignore
+Dockerfile
+.dockerignore
+*.log
+# Posters subidos en local (no deben ir a la imagen)
+back/images/peliculas/*
+!back/images/peliculas/.gitkeep

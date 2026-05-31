@@ -18,6 +18,66 @@ Este es un trabajo práctico sobre GraphQL que implementa una **red social de pe
 
 > Cualquier persona puede navegar el catálogo sin loguearse. Para comentar y puntuar hay que iniciar sesión. Para cargar películas hay que ser **admin**.
 
+## Despliegue con Docker (imagen única) y Render
+
+La aplicación se empaqueta en **una sola imagen Docker** que sirve, desde un único
+puerto, el **frontend estático**, el **API GraphQL** (`/graphql`) y las **imágenes**
+(`/images`). La base de datos PostgreSQL es externa (en Render, un servicio gestionado).
+
+### Variables de entorno
+
+| Variable | Descripción | Por defecto |
+|---|---|---|
+| `PORT` | Puerto donde escucha el servidor (Render lo inyecta) | `4000` |
+| `DATABASE_URL` | Cadena de conexión a PostgreSQL | (usa credenciales locales si no está) |
+| `DATABASE_SSL` | `false` para desactivar SSL (Render interno no lo necesita) | SSL activado cuando hay `DATABASE_URL` |
+| `JWT_SECRET` | Secreto para firmar los tokens JWT | valor de ejemplo (cambialo en producción) |
+
+> Al arrancar, el servidor ejecuta `init.sql` automáticamente (es idempotente), así que
+> la base queda creada y con datos de ejemplo sin pasos manuales.
+
+### Probar la imagen en local
+
+```bash
+# 1) Construir la imagen
+docker build -t cinesocial .
+
+# 2) Levantar PostgreSQL (ejemplo rápido)
+docker run -d --name cine-db \
+  -e POSTGRES_USER=interfaces-gq -e POSTGRES_PASSWORD=interfaces-gq \
+  -e POSTGRES_DB=interfaces-gq -p 5432:5432 postgres:16-alpine
+
+# 3) Levantar la app apuntando a esa base
+docker run --rm -p 4000:4000 \
+  -e DATABASE_URL="postgres://interfaces-gq:interfaces-gq@host.docker.internal:5432/interfaces-gq" \
+  -e DATABASE_SSL=false \
+  cinesocial
+```
+
+Luego abrí **http://localhost:4000** (frontend) y **http://localhost:4000/graphql** (GraphQL).
+
+### Desplegar en Render
+
+**Opción A — Blueprint (recomendada).** El repo incluye `render.yaml`, que crea la web
+service Docker + una base PostgreSQL y las conecta automáticamente:
+
+1. Subí el repositorio a GitHub.
+2. En Render: **New → Blueprint**, elegí el repo y confirmá.
+3. Render construye la imagen, crea la base y enlaza `DATABASE_URL`. Listo.
+
+**Opción B — Manual.**
+
+1. **New → PostgreSQL** y copiá su *Internal Database URL*.
+2. **New → Web Service**, elegí el repo y *Runtime: Docker*.
+3. En **Environment** agregá:
+   - `DATABASE_URL` = la URL de la base del paso 1
+   - `JWT_SECRET` = un secreto propio
+4. Deploy. Render asigna el puerto vía `PORT` (ya contemplado en el código).
+
+> **Nota sobre las imágenes subidas:** los posters se guardan en disco. En el plan
+> gratuito de Render el disco es **efímero** (se pierde en cada redeploy). Para
+> conservarlos hay que agregar un *Persistent Disk* montado en `back/images` (planes pagos).
+
 ## Requisitos Previos
 
 - **Node.js** (versión 18 o superior) con npm
@@ -133,9 +193,13 @@ npm start
 Servidor listo en http://localhost:4000/
 ```
 
+> El backend ahora sirve **todo en un solo puerto**: el frontend en la raíz
+> (**http://localhost:4000/**), el API GraphQL en **/graphql** y las imágenes en **/images**.
+> Ya no hace falta levantar un servidor aparte para el frontend.
+
 ### 3. Probar GraphiQL (Explorador GraphQL)
 
-Abre tu navegador en: **http://localhost:4000/**
+Abre tu navegador en: **http://localhost:4000/graphql**
 
 Aquí puedes escribir y probar consultas GraphQL directamente.
 
@@ -190,32 +254,15 @@ mutation {
 }
 ```
 
-### 4. Instalar dependencias del Frontend
+### 4. Abrir la Aplicación
 
-En otra terminal (sin cerrar la del backend):
+El mismo servidor del backend sirve el frontend. Abre tu navegador en:
 
-```powershell
-cd front
-npm install
-```
+**http://localhost:4000**
 
-### 5. Iniciar el Servidor Frontend
-
-```powershell
-npm start
-```
-
-**Salida esperada:**
-```
-Starting up http-server, serving ./
-Hit CTRL-C to stop the server
-Available on:
-  http://localhost:5500
-```
-
-### 6. Abrir la Aplicación
-
-Abre tu navegador en: **http://localhost:5500**
+> Si preferís servir el frontend desde otro host/puerto (por ejemplo con `http-server`
+> en `front/`), definí la variable `PUBLIC_BASE_URL` en el backend (por ej.
+> `http://localhost:4000`) para que las URLs de las imágenes sigan apuntando al backend.
 
 ## Funcionalidades de la Interfaz
 

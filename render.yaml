@@ -1,0 +1,19 @@
+# Blueprint de Render: una web service (imagen Docker única) + una base PostgreSQL.
+# Importá este repo en Render como "Blueprint" y creará todo automáticamente.
+services:
+  - type: web
+    name: cinesocial
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cinesocial-db
+          property: connectionString
+
+databases:
+  - name: cinesocial-db
+    plan: free

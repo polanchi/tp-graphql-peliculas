@@ -2,7 +2,9 @@
  * API GraphQL - Funciones para comunicarse con el servidor
  */
 
-const GRAPHQL_URL = "http://localhost:4000/";
+// URL relativa: el frontend y el backend se sirven desde el mismo origen
+// (una sola imagen Docker), por lo que funciona en cualquier dominio (Render, localhost, etc.).
+const GRAPHQL_URL = "/graphql";
 const TOKEN_KEY = "peliculas_token";
 
 export function guardarToken(token) {
