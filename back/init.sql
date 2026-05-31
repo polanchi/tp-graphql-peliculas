@@ -16,6 +16,11 @@ CREATE TABLE IF NOT EXISTS directores (
   nombre VARCHAR(100) NOT NULL
 );
 
+-- Lista predeterminada de géneros. No se cargan géneros nuevos desde la app.
+CREATE TABLE IF NOT EXISTS generos (
+  nombre VARCHAR(100) PRIMARY KEY
+);
+
 CREATE TABLE IF NOT EXISTS peliculas (
   id SERIAL PRIMARY KEY,
   titulo VARCHAR(200) NOT NULL,
@@ -82,6 +87,37 @@ VALUES
   ('Francis Ford Coppola'),
   ('Bong Joon-ho')
 ON CONFLICT DO NOTHING;
+
+-- Géneros predeterminados (lista fija, no editable desde la app)
+INSERT INTO generos (nombre)
+VALUES
+  ('Acción'),
+  ('Aventura'),
+  ('Animación'),
+  ('Ciencia ficción'),
+  ('Comedia'),
+  ('Documental'),
+  ('Drama'),
+  ('Fantasía'),
+  ('Misterio'),
+  ('Musical'),
+  ('Romance'),
+  ('Suspenso'),
+  ('Terror'),
+  ('Thriller')
+ON CONFLICT DO NOTHING;
+
+-- Garantiza a nivel de base de datos que cada película use un género válido.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'peliculas_genero_fkey'
+  ) THEN
+    ALTER TABLE peliculas
+      ADD CONSTRAINT peliculas_genero_fkey
+      FOREIGN KEY (genero) REFERENCES generos(nombre);
+  END IF;
+END $$;
 
 INSERT INTO peliculas (titulo, anio, genero, director_id)
 VALUES

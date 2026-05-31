@@ -87,13 +87,17 @@ export const peliculasResolvers = {
       return result.rows[0] || null;
     },
     generos: async () => {
-      const result = await query("SELECT DISTINCT genero FROM peliculas ORDER BY genero");
-      return result.rows.map((r) => r.genero);
+      const result = await query("SELECT nombre FROM generos ORDER BY nombre");
+      return result.rows.map((r) => r.nombre);
     },
   },
   Mutation: {
     agregarPelicula: async (_, { titulo, anio, genero, directorId }, context) => {
       requireAdmin(context);
+      const generoValido = await query("SELECT 1 FROM generos WHERE nombre = $1", [genero]);
+      if (!generoValido.rows[0]) {
+        throw new Error("Género inválido. Elegí uno de la lista de géneros disponibles.");
+      }
       const result = await query(
         `INSERT INTO peliculas (titulo, anio, genero, director_id)
          VALUES ($1, $2, $3, $4)

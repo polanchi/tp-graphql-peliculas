@@ -45,9 +45,13 @@ El backend usa PostgreSQL con estas credenciales fijas:
 - Puerto: `5432`
 
 El archivo de inicialización está disponible en `back/init.sql`. Incluye las tablas nuevas
-(`comentarios`, `calificaciones`, `pelicula_likes`, `comentario_likes`) y columnas nuevas
+(`comentarios`, `calificaciones`, `pelicula_likes`, `comentario_likes`, `generos`) y columnas nuevas
 (`usuarios.password_hash`, `usuarios.bio`). El script es **idempotente**: podés correrlo sobre una
 base existente y solo agrega lo que falte (usa `CREATE TABLE IF NOT EXISTS` y `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`).
+
+> Los **géneros** son una **lista predeterminada y fija** que vive en la tabla `generos`. No se pueden
+> cargar géneros nuevos desde la app: al agregar una película solo se puede elegir uno de los géneros
+> existentes. Una clave foránea (`peliculas.genero` → `generos.nombre`) garantiza esto a nivel de base de datos.
 
 Para crear la base y cargar datos de ejemplo, ejecuta:
 
@@ -229,7 +233,7 @@ Abre tu navegador en: **http://localhost:5500**
 ### Formulario para Agregar Películas
 - **Título**: Campo de texto obligatorio
 - **Año**: Campo numérico obligatorio
-- **Género**: Campo de texto obligatorio
+- **Género**: Dropdown con la lista fija de géneros (no se pueden crear nuevos)
 - **Director**: Dropdown con directores disponibles
 - **Botón Agregar**: Envía la mutación GraphQL
 

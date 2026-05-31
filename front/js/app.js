@@ -5,7 +5,7 @@ import * as api from "./api.js";
 let usuarioActual = null;
 let generosCache = [];
 let directoresCache = [];
-const filtros = { busqueda: "", genero: "", ordenarPor: "" };
+const filtros = { busqueda: "", genero: "", directorId: "", ordenarPor: "" };
 
 const $ = (sel) => document.querySelector(sel);
 const esAdmin = () => usuarioActual?.rol?.nombre === "admin";
@@ -138,11 +138,26 @@ async function cargarFiltros() {
       '<option value="">Todos los géneros</option>' +
       generosCache.map((g) => `<option value="${escaparHtml(g)}">${escaparHtml(g)}</option>`).join("");
 
+    const selFormGenero = $("#genero");
+    if (selFormGenero) {
+      selFormGenero.innerHTML =
+        '<option value="" disabled selected>Elegí un género</option>' +
+        generosCache.map((g) => `<option value="${escaparHtml(g)}">${escaparHtml(g)}</option>`).join("");
+    }
+
     const selDirector = $("#directorId");
     if (selDirector) {
       selDirector.innerHTML = directoresCache
         .map((d) => `<option value="${d.id}">${escaparHtml(d.nombre)}</option>`)
         .join("");
+    }
+
+    const selFiltroDirector = $("#select-director");
+    if (selFiltroDirector) {
+      selFiltroDirector.innerHTML =
+        '<option value="">Todos los directores</option>' +
+        directoresCache.map((d) => `<option value="${d.id}">${escaparHtml(d.nombre)}</option>`).join("");
+      selFiltroDirector.value = filtros.directorId;
     }
     $("#total-directores").textContent = directoresCache.length;
     $("#total-generos").textContent = generosCache.length;
@@ -490,6 +505,10 @@ function conectarEventosGlobales() {
   });
   $("#select-genero").addEventListener("change", (e) => {
     filtros.genero = e.target.value;
+    renderizarPeliculas();
+  });
+  $("#select-director").addEventListener("change", (e) => {
+    filtros.directorId = e.target.value;
     renderizarPeliculas();
   });
   $("#select-orden").addEventListener("change", (e) => {

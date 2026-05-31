@@ -49,6 +49,9 @@
             <select id="select-genero"><option value="">Todos los géneros</option></select>
           </div>
           <div class="select-wrap">
+            <select id="select-director"><option value="">Todos los directores</option></select>
+          </div>
+          <div class="select-wrap">
             <select id="select-orden">
               <option value="">Orden por defecto</option>
               <option value="TITULO">Título (A-Z)</option>
@@ -134,7 +137,9 @@
           </div>
           <div class="field">
             <label>Género</label>
-            <input type="text" id="genero" placeholder="Ej: Acción" required />
+            <div class="select-wrap">
+              <select id="genero" required></select>
+            </div>
           </div>
           <div class="field">
             <label>Director</label>
