@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS roles (
 
 CREATE TABLE IF NOT EXISTS directores (
   id SERIAL PRIMARY KEY,
-  nombre VARCHAR(100) NOT NULL
+  nombre VARCHAR(100) NOT NULL UNIQUE
 );
 
 -- Lista predeterminada de géneros. No se cargan géneros nuevos desde la app.
@@ -85,12 +85,40 @@ INSERT INTO roles (nombre)
 VALUES ('admin'), ('editor'), ('usuario')
 ON CONFLICT DO NOTHING;
 
+-- Para bases ya existentes: elimina directores duplicados por nombre (creados
+-- al volver a correr este script sin la restricción UNIQUE) y garantiza la
+-- restricción que evita futuras duplicaciones. Las películas se reapuntan al
+-- id canónico (el menor) de cada director antes de borrar los duplicados.
+DO $$
+BEGIN
+  UPDATE peliculas p
+  SET director_id = c.id_canonico
+  FROM (
+    SELECT id, MIN(id) OVER (PARTITION BY nombre) AS id_canonico
+    FROM directores
+  ) c
+  WHERE p.director_id = c.id AND c.id <> c.id_canonico;
+
+  DELETE FROM directores d
+  USING (
+    SELECT id, MIN(id) OVER (PARTITION BY nombre) AS id_canonico
+    FROM directores
+  ) c
+  WHERE d.id = c.id AND c.id <> c.id_canonico;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'directores_nombre_key'
+  ) THEN
+    ALTER TABLE directores ADD CONSTRAINT directores_nombre_key UNIQUE (nombre);
+  END IF;
+END $$;
+
 INSERT INTO directores (nombre)
 VALUES
   ('Christopher Nolan'),
   ('Francis Ford Coppola'),
   ('Bong Joon-ho')
-ON CONFLICT DO NOTHING;
+ON CONFLICT (nombre) DO NOTHING;
 
 -- Géneros predeterminados (lista fija, no editable desde la app)
 INSERT INTO generos (nombre)

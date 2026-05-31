@@ -32,7 +32,9 @@ export const directoresResolvers = {
     agregarDirector: async (_, { nombre }, context) => {
       requireAdmin(context);
       const result = await query(
-        "INSERT INTO directores (nombre) VALUES ($1) RETURNING id, nombre",
+        `INSERT INTO directores (nombre) VALUES ($1)
+         ON CONFLICT (nombre) DO UPDATE SET nombre = EXCLUDED.nombre
+         RETURNING id, nombre`,
         [nombre]
       );
       return result.rows[0];
