@@ -195,18 +195,31 @@ async function cargarFiltros() {
       '<option value="">Todos los géneros</option>' +
       generosCache.map((g) => `<option value="${escaparHtml(g)}">${escaparHtml(g)}</option>`).join("");
 
+    const optsGenero = generosCache
+      .map((g) => `<option value="${escaparHtml(g)}">${escaparHtml(g)}</option>`)
+      .join("");
+    const optsDirector = directoresCache
+      .map((d) => `<option value="${d.id}">${escaparHtml(d.nombre)}</option>`)
+      .join("");
+
     const selFormGenero = $("#genero");
     if (selFormGenero) {
-      selFormGenero.innerHTML =
-        '<option value="" disabled selected>Elegí un género</option>' +
-        generosCache.map((g) => `<option value="${escaparHtml(g)}">${escaparHtml(g)}</option>`).join("");
+      selFormGenero.innerHTML = '<option value="" disabled selected>Elegí un género</option>' + optsGenero;
     }
 
     const selDirector = $("#directorId");
     if (selDirector) {
-      selDirector.innerHTML = directoresCache
-        .map((d) => `<option value="${d.id}">${escaparHtml(d.nombre)}</option>`)
-        .join("");
+      selDirector.innerHTML = optsDirector;
+    }
+
+    const selEditarGenero = $("#editar-genero");
+    if (selEditarGenero) {
+      selEditarGenero.innerHTML = optsGenero;
+    }
+
+    const selEditarDirector = $("#editar-directorId");
+    if (selEditarDirector) {
+      selEditarDirector.innerHTML = optsDirector;
     }
 
     const selFiltroDirector = $("#select-director");
@@ -331,6 +344,14 @@ function renderDetalle(p) {
           <span class="muted">(${p.cantidadVotos} votos)</span>
           <button class="btn-like grande" id="btn-like-pelicula">${p.meGusta ? "❤️" : "🤍"} ${p.cantidadLikes}</button>
         </div>
+        ${
+          esAdmin()
+            ? `<div class="detalle-admin-acciones">
+                 <button class="btn-ghost btn-sm" id="btn-editar-pelicula">Editar película</button>
+                 <button class="btn-link-danger" id="btn-eliminar-pelicula">Eliminar película</button>
+               </div>`
+            : ""
+        }
       </div>
     </div>
 
@@ -368,6 +389,25 @@ function conectarEventosDetalle(p) {
         renderizarPeliculas();
       } catch (error) {
         alert(error.message);
+      }
+    });
+  }
+
+  // Acciones de administración: editar / eliminar película
+  const btnEditar = $("#btn-editar-pelicula");
+  if (btnEditar) {
+    btnEditar.addEventListener("click", () => abrirEditarPelicula(p));
+  }
+  const btnEliminar = $("#btn-eliminar-pelicula");
+  if (btnEliminar) {
+    btnEliminar.addEventListener("click", async () => {
+      if (!confirm(`¿Eliminar la película "${p.titulo}"? Esta acción no se puede deshacer.`)) return;
+      try {
+        await api.eliminarPelicula(p.id);
+        cerrarModal("modal-detalle");
+        await renderizarPeliculas();
+      } catch (error) {
+        alert("Error al eliminar la película: " + error.message);
       }
     });
   }
@@ -486,6 +526,7 @@ function aplicarPermisosAdmin() {
   if (!esAdmin()) {
     cerrarModal("modal-agregar");
     cerrarModal("modal-agregar-director");
+    cerrarModal("modal-editar");
   }
 }
 
@@ -512,6 +553,50 @@ async function manejarAgregarPelicula(e) {
     await renderizarPeliculas();
   } catch (error) {
     msg.textContent = "Error al agregar la película: " + error.message;
+  }
+}
+
+function abrirEditarPelicula(p) {
+  $("#editar-id").value = p.id;
+  $("#editar-titulo").value = p.titulo;
+  $("#editar-anio").value = p.anio;
+  $("#editar-genero").value = p.genero;
+  $("#editar-directorId").value = p.director.id;
+  $("#editar-poster").value = "";
+  $("#editar-pelicula-msg").textContent = "";
+  const preview = $("#editar-poster-preview");
+  if (p.poster) {
+    preview.src = p.poster;
+    preview.classList.remove("hidden");
+  } else {
+    preview.classList.add("hidden");
+  }
+  cerrarModal("modal-detalle");
+  abrirModal("modal-editar");
+}
+
+async function manejarEditarPelicula(e) {
+  e.preventDefault();
+  const msg = $("#editar-pelicula-msg");
+  msg.textContent = "";
+  const id = $("#editar-id").value;
+  const titulo = $("#editar-titulo").value.trim();
+  const anio = parseInt($("#editar-anio").value, 10);
+  const genero = $("#editar-genero").value.trim();
+  const directorId = $("#editar-directorId").value;
+  const archivoPoster = $("#editar-poster").files[0];
+  if (!titulo || !anio || !genero || !directorId) {
+    msg.textContent = "Completá todos los campos.";
+    return;
+  }
+  try {
+    const poster = archivoPoster ? await leerArchivoComoBase64(archivoPoster) : null;
+    await api.editarPelicula({ id, titulo, anio, genero, directorId, poster });
+    cerrarModal("modal-editar");
+    await renderizarPeliculas();
+    await abrirDetalle(id);
+  } catch (error) {
+    msg.textContent = "Error al editar la película: " + error.message;
   }
 }
 
@@ -554,11 +639,27 @@ function conectarEventosGlobales() {
   $("#form-login").addEventListener("submit", manejarLogin);
   $("#form-registro").addEventListener("submit", manejarRegistro);
   $("#form-agregar").addEventListener("submit", manejarAgregarPelicula);
+  $("#form-editar").addEventListener("submit", manejarEditarPelicula);
   $("#form-agregar-director").addEventListener("submit", manejarAgregarDirector);
   // Vista previa del poster al elegir una imagen
   $("#poster").addEventListener("change", async (e) => {
     const archivo = e.target.files[0];
     const preview = $("#poster-preview");
+    if (!archivo) {
+      preview.classList.add("hidden");
+      return;
+    }
+    try {
+      preview.src = await leerArchivoComoBase64(archivo);
+      preview.classList.remove("hidden");
+    } catch {
+      preview.classList.add("hidden");
+    }
+  });
+  // Vista previa del poster al editar una película
+  $("#editar-poster").addEventListener("change", async (e) => {
+    const archivo = e.target.files[0];
+    const preview = $("#editar-poster-preview");
     if (!archivo) {
       preview.classList.add("hidden");
       return;

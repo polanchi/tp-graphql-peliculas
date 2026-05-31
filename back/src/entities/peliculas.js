@@ -36,6 +36,8 @@ export const peliculasTypeDefs = `#graphql
   extend type Mutation {
     "El poster se envía como Data URL en base64 (la imagen real, no un enlace)."
     agregarPelicula(titulo: String!, anio: Int!, genero: String!, directorId: ID!, poster: String): Pelicula
+    "Edita una película. Solo se actualizan los campos enviados. Si poster viene como Data URL se reemplaza la imagen."
+    editarPelicula(id: ID!, titulo: String, anio: Int, genero: String, directorId: ID, poster: String): Pelicula
     eliminarPelicula(id: ID!): Boolean!
     toggleLikePelicula(peliculaId: ID!): Pelicula!
   }
@@ -109,6 +111,60 @@ export const peliculasResolvers = {
          RETURNING id, titulo, anio, genero, poster, director_id AS "directorId"`,
         [titulo, anio, genero, directorId, posterPath]
       );
+      return result.rows[0];
+    },
+    editarPelicula: async (_, { id, titulo, anio, genero, directorId, poster }, context) => {
+      requireAdmin(context);
+
+      const previa = await query("SELECT poster FROM peliculas WHERE id = $1", [id]);
+      if (!previa.rows[0]) {
+        throw new Error("La película que querés editar no existe.");
+      }
+
+      if (genero != null) {
+        const generoValido = await query("SELECT 1 FROM generos WHERE nombre = $1", [genero]);
+        if (!generoValido.rows[0]) {
+          throw new Error("Género inválido. Elegí uno de la lista de géneros disponibles.");
+        }
+      }
+
+      // Construye dinámicamente el SET solo con los campos enviados.
+      const campos = [];
+      const params = [];
+      const agregar = (columna, valor) => {
+        params.push(valor);
+        campos.push(`${columna} = $${params.length}`);
+      };
+
+      if (titulo != null) agregar("titulo", titulo);
+      if (anio != null) agregar("anio", anio);
+      if (genero != null) agregar("genero", genero);
+      if (directorId != null) agregar("director_id", directorId);
+
+      // Si llega una nueva imagen, la guardamos y borramos la anterior.
+      let posterAnterior = null;
+      if (poster != null && poster !== "") {
+        const posterPath = await guardarPoster(poster);
+        agregar("poster", posterPath);
+        posterAnterior = previa.rows[0].poster;
+      }
+
+      if (campos.length === 0) {
+        const sinCambios = await query(`${SELECT_PELICULA} WHERE id = $1`, [id]);
+        return sinCambios.rows[0];
+      }
+
+      params.push(id);
+      const result = await query(
+        `UPDATE peliculas SET ${campos.join(", ")}
+         WHERE id = $${params.length}
+         RETURNING id, titulo, anio, genero, poster, director_id AS "directorId"`,
+        params
+      );
+
+      if (posterAnterior) {
+        await eliminarPoster(posterAnterior);
+      }
       return result.rows[0];
     },
     eliminarPelicula: async (_, { id }, context) => {

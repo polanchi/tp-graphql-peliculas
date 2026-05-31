@@ -206,6 +206,25 @@ export async function crearPelicula({ titulo, anio, genero, directorId, poster }
   return data.agregarPelicula;
 }
 
+export async function editarPelicula({ id, titulo, anio, genero, directorId, poster }) {
+  const query = `
+    mutation Editar($id: ID!, $titulo: String, $anio: Int, $genero: String, $directorId: ID, $poster: String) {
+      editarPelicula(id: $id, titulo: $titulo, anio: $anio, genero: $genero, directorId: $directorId, poster: $poster) {
+        id titulo anio genero poster director { id nombre }
+      }
+    }
+  `;
+  const data = await ejecutarConsulta(query, {
+    id,
+    titulo,
+    anio,
+    genero,
+    directorId,
+    poster: poster || null,
+  });
+  return data.editarPelicula;
+}
+
 export async function eliminarPelicula(id) {
   const query = `mutation Eliminar($id: ID!) { eliminarPelicula(id: $id) }`;
   const data = await ejecutarConsulta(query, { id });
