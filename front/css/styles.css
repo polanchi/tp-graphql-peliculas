@@ -473,4 +473,38 @@ tbody tr:hover { background: #141418; }
   body { padding: 20px; }
   .filtros, .perfil-col, .form-grid { grid-template-columns: 1fr; }
   .stats { grid-template-columns: 1fr; }
+
+  /* Topbar y navegación de sesión */
+  .topbar {
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .nav-auth {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  /* "Hola, nombre" ocupa el espacio disponible y se trunca si es muy largo */
+  #btn-perfil {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Botones de sesión cómodos al tacto */
+  .nav-auth .btn,
+  .nav-auth .btn-ghost {
+    flex: 0 0 auto;
+    padding: 9px 14px;
+  }
+  /* Cuando no hay sesión, Ingresar y Registrarse comparten el ancho */
+  .nav-auth #btn-abrir-login,
+  .nav-auth #btn-abrir-registro {
+    flex: 1 1 0;
+    text-align: center;
+  }
 }
