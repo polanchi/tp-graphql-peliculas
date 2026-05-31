@@ -286,6 +286,7 @@ function conectarEventosDetalle(p) {
       try {
         const r = await api.toggleLikePelicula(p.id);
         btnLike.textContent = `${r.meGusta ? "❤️" : "🤍"} ${r.cantidadLikes}`;
+        renderizarPeliculas();
       } catch (error) {
         alert(error.message);
       }
