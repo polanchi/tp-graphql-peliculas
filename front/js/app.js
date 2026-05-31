@@ -49,6 +49,7 @@ function cerrarSesion() {
   api.borrarToken();
   usuarioActual = null;
   renderNavAuth();
+  aplicarPermisosAdmin();
   mostrarCatalogo();
   renderizarPeliculas();
 }
@@ -399,27 +400,31 @@ async function manejarRegistro(e) {
 
 /* ============================ Admin ============================ */
 function aplicarPermisosAdmin() {
-  $("#zona-admin").classList.toggle("hidden", !esAdmin());
+  // El botón "Agregar película" solo está disponible para administradores.
+  $("#btn-abrir-agregar").classList.toggle("hidden", !esAdmin());
+  if (!esAdmin()) cerrarModal("modal-agregar");
 }
 
 async function manejarAgregarPelicula(e) {
   e.preventDefault();
+  const msg = $("#agregar-msg");
+  msg.textContent = "";
   const titulo = $("#titulo").value.trim();
   const anio = parseInt($("#anio").value, 10);
   const genero = $("#genero").value.trim();
   const directorId = $("#directorId").value;
   if (!titulo || !anio || !genero || !directorId) {
-    alert("Completá todos los campos.");
+    msg.textContent = "Completá todos los campos.";
     return;
   }
   try {
     await api.crearPelicula({ titulo, anio, genero, directorId });
     $("#form-agregar").reset();
+    cerrarModal("modal-agregar");
     await cargarFiltros();
     await renderizarPeliculas();
-    alert("¡Película agregada!");
   } catch (error) {
-    alert("Error al agregar la película: " + error.message);
+    msg.textContent = "Error al agregar la película: " + error.message;
   }
 }
 
@@ -443,6 +448,7 @@ function conectarEventosGlobales() {
   $("#form-login").addEventListener("submit", manejarLogin);
   $("#form-registro").addEventListener("submit", manejarRegistro);
   $("#form-agregar").addEventListener("submit", manejarAgregarPelicula);
+  $("#btn-abrir-agregar").addEventListener("click", () => abrirModal("modal-agregar"));
   $("#btn-volver-catalogo").addEventListener("click", mostrarCatalogo);
   $("#logo-home").addEventListener("click", () => {
     mostrarCatalogo();

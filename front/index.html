@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>CineSocial · Red social de películas</title>
     <link rel="stylesheet" href="css/styles.css" />
   </head>
@@ -59,41 +62,10 @@
         <div class="section-header">
           <h2>Películas</h2>
           <span class="pill-count" id="pill-count">0 resultados</span>
+          <button class="btn btn-sm hidden" id="btn-abrir-agregar">+ Agregar película</button>
         </div>
 
         <div class="grid-peliculas" id="grid-peliculas"></div>
-
-        <!-- Formulario solo para administradores -->
-        <div id="zona-admin" class="hidden">
-          <div class="section-header">
-            <h2>Agregar película <span class="badge-admin">admin</span></h2>
-          </div>
-          <div class="form-card">
-            <form id="form-agregar">
-              <div class="form-grid">
-                <div class="field">
-                  <label>Título</label>
-                  <input type="text" id="titulo" placeholder="Ej: The Dark Knight" required />
-                </div>
-                <div class="field">
-                  <label>Año</label>
-                  <input type="number" id="anio" placeholder="Ej: 2008" required />
-                </div>
-                <div class="field">
-                  <label>Género</label>
-                  <input type="text" id="genero" placeholder="Ej: Acción" required />
-                </div>
-                <div class="field">
-                  <label>Director</label>
-                  <div class="select-wrap">
-                    <select id="directorId"></select>
-                  </div>
-                </div>
-              </div>
-              <button type="submit" class="btn">Agregar película</button>
-            </form>
-          </div>
-        </div>
       </section>
 
       <!-- ====================== PERFIL ====================== -->
@@ -141,6 +113,36 @@
           </div>
           <button type="submit" class="btn btn-block">Crear cuenta</button>
           <p class="auth-msg" id="registro-msg"></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- ====================== MODAL AGREGAR PELÍCULA (admin) ====================== -->
+    <div class="modal-overlay hidden" id="modal-agregar">
+      <div class="modal">
+        <button class="modal-close" data-close="modal-agregar">×</button>
+        <h2 class="modal-titulo">Agregar película <span class="badge-admin">admin</span></h2>
+        <form id="form-agregar" class="auth-form">
+          <div class="field">
+            <label>Título</label>
+            <input type="text" id="titulo" placeholder="Ej: The Dark Knight" required />
+          </div>
+          <div class="field">
+            <label>Año</label>
+            <input type="number" id="anio" placeholder="Ej: 2008" required />
+          </div>
+          <div class="field">
+            <label>Género</label>
+            <input type="text" id="genero" placeholder="Ej: Acción" required />
+          </div>
+          <div class="field">
+            <label>Director</label>
+            <div class="select-wrap">
+              <select id="directorId"></select>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-block">Agregar película</button>
+          <p class="auth-msg" id="agregar-msg"></p>
         </form>
       </div>
     </div>
