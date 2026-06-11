@@ -39,12 +39,14 @@ CREATE TABLE IF NOT EXISTS usuarios (
   email VARCHAR(200) NOT NULL UNIQUE,
   password_hash VARCHAR(255),
   bio TEXT,
+  avatar VARCHAR(255),
   rol_id INT NOT NULL REFERENCES roles(id)
 );
 
 -- Para bases ya existentes (agrega columnas nuevas sin romper datos)
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS avatar VARCHAR(255);
 
 -- Comentarios de usuarios sobre películas
 CREATE TABLE IF NOT EXISTS comentarios (

@@ -7,3 +7,4 @@ Dockerfile
 # Posters subidos en local (no deben ir a la imagen)
 back/images/peliculas/*
 !back/images/peliculas/.gitkeep
+back/images/usuarios/*

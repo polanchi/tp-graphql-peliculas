@@ -1,22 +1,34 @@
-// Función para obtener color del badge según el género
 export function getColor(genero) {
   const coloresBadge = {
-    "Ciencia ficción": "background:#1a2a4a;color:#60a5fa",
-    "Drama": "background:#2a1a3a;color:#c084fc",
-    "Thriller": "background:#2a1a3a;color:#f472b6",
-    "Acción": "background:#2a1a1a;color:#f87171",
-    "Comedia": "background:#1a2a1a;color:#86efac",
+    "Ciencia ficcion": "background:rgba(81,112,157,.24);color:#bcd2ff;border:1px solid rgba(159,183,223,.18)",
+    "Ciencia ficción": "background:rgba(81,112,157,.24);color:#bcd2ff;border:1px solid rgba(159,183,223,.18)",
+    Drama: "background:rgba(126,74,51,.28);color:#f2d3a4;border:1px solid rgba(235,195,145,.18)",
+    Thriller: "background:rgba(125,49,43,.28);color:#ffcab8;border:1px solid rgba(238,157,144,.18)",
+    Accion: "background:rgba(130,58,38,.28);color:#ffc6ae;border:1px solid rgba(235,154,123,.18)",
+    "Acción": "background:rgba(130,58,38,.28);color:#ffc6ae;border:1px solid rgba(235,154,123,.18)",
+    Comedia: "background:rgba(110,99,54,.28);color:#f5e39e;border:1px solid rgba(245,225,136,.18)",
+    Romance: "background:rgba(129,76,92,.28);color:#ffd0dd;border:1px solid rgba(255,180,201,.18)",
+    Suspenso: "background:rgba(71,67,84,.3);color:#d9d2eb;border:1px solid rgba(189,183,217,.18)",
+    Terror: "background:rgba(74,38,48,.32);color:#f6c8d5;border:1px solid rgba(209,127,157,.18)",
+    Documental: "background:rgba(78,88,66,.3);color:#dbe8be;border:1px solid rgba(180,196,142,.18)",
   };
-  return coloresBadge[genero] || "background:#2a2a2a;color:#aaa";
+
+  return (
+    coloresBadge[genero] ||
+    "background:rgba(255,244,223,.05);color:#e8d7b5;border:1px solid rgba(216,176,111,.16)"
+  );
 }
 
-// Función para obtener iniciales de un nombre
 export function getIniciales(nombre) {
   if (!nombre) return "?";
-  return nombre.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  return nombre
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
-// Escapa texto para insertarlo de forma segura en HTML
 export function escaparHtml(texto) {
   if (texto == null) return "";
   return String(texto)
@@ -27,7 +39,6 @@ export function escaparHtml(texto) {
     .replace(/'/g, "&#39;");
 }
 
-// Devuelve una fecha legible a partir de un timestamp/ISO o epoch en string
 export function formatearFecha(valor) {
   if (!valor) return "";
   let fecha;
@@ -44,7 +55,6 @@ export function formatearFecha(valor) {
   });
 }
 
-// Genera el HTML de estrellas (llenas/vacías) para mostrar un promedio
 export function estrellasTexto(promedio) {
   const llenas = Math.round(promedio);
   let salida = "";

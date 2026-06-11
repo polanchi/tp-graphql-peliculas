@@ -1,6 +1,7 @@
 import { query } from "../db.js";
 import { GraphQLError } from "graphql";
 import { hashPassword, verifyPassword, signToken, requireAuth } from "../auth.js";
+import { avatarUrl, guardarAvatar } from "../uploads.js";
 
 export const usuariosTypeDefs = `#graphql
   type Usuario {
@@ -8,6 +9,7 @@ export const usuariosTypeDefs = `#graphql
     nombre: String!
     email: String!
     bio: String
+    avatar: String
     rol: Rol!
     comentarios: [Comentario!]!
     calificaciones: [Calificacion!]!
@@ -29,12 +31,12 @@ export const usuariosTypeDefs = `#graphql
   extend type Mutation {
     registrar(nombre: String!, email: String!, password: String!): AuthPayload!
     login(email: String!, password: String!): AuthPayload!
-    actualizarPerfil(nombre: String, bio: String): Usuario!
+    actualizarPerfil(nombre: String, bio: String, avatar: String): Usuario!
   }
 `;
 
 const SELECT_USUARIO =
-  'SELECT id, nombre, email, bio, rol_id AS "rolId" FROM usuarios';
+  'SELECT id, nombre, email, bio, avatar, rol_id AS "rolId" FROM usuarios';
 
 export const usuariosResolvers = {
   Query: {
@@ -68,7 +70,7 @@ export const usuariosResolvers = {
       const result = await query(
         `INSERT INTO usuarios (nombre, email, password_hash, rol_id)
          VALUES ($1, $2, $3, (SELECT id FROM roles WHERE nombre = 'usuario'))
-         RETURNING id, nombre, email, bio, rol_id AS "rolId"`,
+         RETURNING id, nombre, email, bio, avatar, rol_id AS "rolId"`,
         [nombre.trim(), emailNormalizado, passwordHash]
       );
       const usuario = result.rows[0];
@@ -77,7 +79,7 @@ export const usuariosResolvers = {
     login: async (_, { email, password }) => {
       const emailNormalizado = email.trim().toLowerCase();
       const result = await query(
-        `SELECT id, nombre, email, bio, password_hash AS "passwordHash", rol_id AS "rolId"
+        `SELECT id, nombre, email, bio, avatar, password_hash AS "passwordHash", rol_id AS "rolId"
          FROM usuarios WHERE email = $1`,
         [emailNormalizado]
       );
@@ -90,19 +92,21 @@ export const usuariosResolvers = {
       delete usuario.passwordHash;
       return { token: signToken(usuario), usuario };
     },
-    actualizarPerfil: async (_, { nombre, bio }, context) => {
+    actualizarPerfil: async (_, { nombre, bio, avatar }, context) => {
       const actual = requireAuth(context);
+      const avatarRelativo = avatar ? await guardarAvatar(avatar) : null;
       const result = await query(
         `UPDATE usuarios
-         SET nombre = COALESCE($1, nombre), bio = COALESCE($2, bio)
-         WHERE id = $3
-         RETURNING id, nombre, email, bio, rol_id AS "rolId"`,
-        [nombre ?? null, bio ?? null, actual.id]
+         SET nombre = COALESCE($1, nombre), bio = COALESCE($2, bio), avatar = COALESCE($3, avatar)
+         WHERE id = $4
+         RETURNING id, nombre, email, bio, avatar, rol_id AS "rolId"`,
+        [nombre ?? null, bio ?? null, avatarRelativo, actual.id]
       );
       return result.rows[0];
     },
   },
   Usuario: {
+    avatar: (usuario) => avatarUrl(usuario.avatar),
     rol: async (usuario) => {
       const result = await query("SELECT id, nombre FROM roles WHERE id = $1", [usuario.rolId]);
       return result.rows[0] || null;

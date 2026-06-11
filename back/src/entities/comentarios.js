@@ -82,7 +82,7 @@ export const comentariosResolvers = {
   Comentario: {
     usuario: async (comentario) => {
       const result = await query(
-        'SELECT id, nombre, email, bio, rol_id AS "rolId" FROM usuarios WHERE id = $1',
+        'SELECT id, nombre, email, bio, avatar, rol_id AS "rolId" FROM usuarios WHERE id = $1',
         [comentario.usuarioId]
       );
       return result.rows[0] || null;

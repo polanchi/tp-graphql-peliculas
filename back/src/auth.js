@@ -25,7 +25,7 @@ export async function getUsuarioFromToken(token) {
   try {
     const payload = jwt.verify(token, JWT_SECRET);
     const result = await query(
-      `SELECT u.id, u.nombre, u.email, u.bio, u.rol_id AS "rolId", r.nombre AS "rolNombre"
+      `SELECT u.id, u.nombre, u.email, u.bio, u.avatar, u.rol_id AS "rolId", r.nombre AS "rolNombre"
        FROM usuarios u
        JOIN roles r ON r.id = u.rol_id
        WHERE u.id = $1`,

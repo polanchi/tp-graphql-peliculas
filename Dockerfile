@@ -1,4 +1,5 @@
-# Imagen única y AUTOCONTENIDA: incluye el backend GraphQL, el frontend estático,
+# Configuracion de la imagen de CineSocial.
+# Imagen unica y autocontenida: incluye el backend GraphQL, el frontend estatico,
 # las imágenes y la propia base de datos PostgreSQL dentro del mismo contenedor.
 #
 # NOTA: la base vive dentro del contenedor. En plataformas con disco efímero

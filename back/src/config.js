@@ -24,6 +24,8 @@ export const IMAGES_BASE_URL = `${PUBLIC_BASE_URL}${IMAGES_ROUTE}`;
 export const IMAGES_DIR = path.resolve(__dirname, "..", "images");
 export const POSTERS_SUBDIR = "peliculas";
 export const POSTERS_DIR = path.join(IMAGES_DIR, POSTERS_SUBDIR);
+export const AVATARS_SUBDIR = "usuarios";
+export const AVATARS_DIR = path.join(IMAGES_DIR, AVATARS_SUBDIR);
 
 // Configuración de la base de datos Postgres.
 // En Render se inyecta DATABASE_URL (cadena de conexión completa). En desarrollo

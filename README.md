@@ -1,5 +1,7 @@
 # CineSocial - Red social de películas (GraphQL con Apollo Server)
 
+Repositorio actualizado para la entrega de CineSocial.
+
 ## Descripción del Proyecto
 
 Este es un trabajo práctico sobre GraphQL que implementa una **red social de películas** con:

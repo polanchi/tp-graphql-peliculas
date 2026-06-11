@@ -58,7 +58,7 @@ export async function registrar({ nombre, email, password }) {
     mutation Registrar($nombre: String!, $email: String!, $password: String!) {
       registrar(nombre: $nombre, email: $email, password: $password) {
         token
-        usuario { id nombre email rol { nombre } }
+        usuario { id nombre email bio avatar rol { nombre } }
       }
     }
   `;
@@ -71,7 +71,7 @@ export async function login({ email, password }) {
     mutation Login($email: String!, $password: String!) {
       login(email: $email, password: $password) {
         token
-        usuario { id nombre email rol { nombre } }
+        usuario { id nombre email bio avatar rol { nombre } }
       }
     }
   `;
@@ -87,6 +87,7 @@ export async function obtenerMe() {
         nombre
         email
         bio
+        avatar
         rol { nombre }
         cantidadComentarios
         cantidadCalificaciones
@@ -108,15 +109,15 @@ export async function obtenerMe() {
   return data.me;
 }
 
-export async function actualizarPerfil({ nombre, bio }) {
+export async function actualizarPerfil({ nombre, bio, avatar }) {
   const query = `
-    mutation ActualizarPerfil($nombre: String, $bio: String) {
-      actualizarPerfil(nombre: $nombre, bio: $bio) {
-        id nombre bio
+    mutation ActualizarPerfil($nombre: String, $bio: String, $avatar: String) {
+      actualizarPerfil(nombre: $nombre, bio: $bio, avatar: $avatar) {
+        id nombre bio avatar
       }
     }
   `;
-  const data = await ejecutarConsulta(query, { nombre, bio });
+  const data = await ejecutarConsulta(query, { nombre, bio, avatar: avatar || null });
   return data.actualizarPerfil;
 }
 
@@ -165,7 +166,7 @@ export async function obtenerPeliculaPorId(id) {
           creadoEn
           cantidadLikes
           meGusta
-          usuario { id nombre rol { nombre } }
+          usuario { id nombre avatar rol { nombre } }
         }
       }
     }
@@ -268,7 +269,7 @@ export async function agregarComentario({ peliculaId, texto }) {
         creadoEn
         cantidadLikes
         meGusta
-        usuario { id nombre rol { nombre } }
+        usuario { id nombre avatar rol { nombre } }
       }
     }
   `;

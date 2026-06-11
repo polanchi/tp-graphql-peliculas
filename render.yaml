@@ -1,3 +1,4 @@
+# Configuracion de despliegue de CineSocial en Render.
 # Blueprint de Render: una sola web service (imagen Docker autocontenida que
 # incluye PostgreSQL adentro). No necesita una base externa.
 #

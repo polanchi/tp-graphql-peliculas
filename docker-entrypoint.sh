@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Arranque de CineSocial en Render.
 # Arranca PostgreSQL dentro del mismo contenedor y luego la app Node.
 # Pensado para una imagen autocontenida (no necesita una base externa).
 set -e

@@ -41,7 +41,7 @@ export const calificacionesResolvers = {
   Calificacion: {
     usuario: async (calificacion) => {
       const result = await query(
-        'SELECT id, nombre, email, bio, rol_id AS "rolId" FROM usuarios WHERE id = $1',
+        'SELECT id, nombre, email, bio, avatar, rol_id AS "rolId" FROM usuarios WHERE id = $1',
         [calificacion.usuarioId]
       );
       return result.rows[0] || null;

@@ -11,6 +11,7 @@ import { buildContext } from "./src/auth.js";
 import { asegurarCarpetasImagenes } from "./src/uploads.js";
 import { inicializarBaseDeDatos } from "./src/db.js";
 
+// Servidor principal de CineSocial.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // back -> raíz del repo -> front
 const FRONTEND_DIR = path.resolve(__dirname, "..", "front");

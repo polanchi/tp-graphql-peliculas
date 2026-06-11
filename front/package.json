@@ -1,7 +1,7 @@
 {
   "name": "tp-graphql-peliculas-frontend",
   "version": "1.0.0",
-  "description": "Frontend - Catálogo de Películas",
+  "description": "Frontend de CineSocial",
   "type": "module",
   "scripts": {
     "start": "npx http-server . -p 5500 -c-1",

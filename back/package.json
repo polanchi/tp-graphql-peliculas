@@ -1,7 +1,7 @@
 {
   "name": "tp-graphql-peliculas-backend",
   "version": "1.0.0",
-  "description": "Backend GraphQL - Catálogo de Películas",
+  "description": "Backend GraphQL de CineSocial",
   "main": "server.js",
   "type": "module",
   "scripts": {

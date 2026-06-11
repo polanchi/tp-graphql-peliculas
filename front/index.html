@@ -6,83 +6,119 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>CineSocial · Red social de películas</title>
+    <title>CineSocial | Catalogo social de peliculas</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
-    <div class="topbar">
+    <div class="page-backdrop" aria-hidden="true"></div>
+    <div class="page-grain" aria-hidden="true"></div>
+
+    <header class="topbar">
       <div class="logo" id="logo-home">
-        <div class="logo-dot"></div>
-        <span class="logo-text">CineSocial</span>
+        <div class="logo-mark" aria-hidden="true">
+          <span class="popcorn-kernel kernel-1"></span>
+          <span class="popcorn-kernel kernel-2"></span>
+          <span class="popcorn-kernel kernel-3"></span>
+          <span class="popcorn-bucket"></span>
+        </div>
+        <div class="logo-copy">
+          <span class="logo-text">CineSocial</span>
+        </div>
       </div>
       <nav class="nav-auth" id="nav-auth">
-        <!-- Se completa dinámicamente según la sesión -->
+        <!-- Se completa dinamicamente segun la sesion -->
       </nav>
-    </div>
+    </header>
 
     <main class="container">
-      <!-- ====================== CATÁLOGO ====================== -->
       <section id="vista-catalogo">
-        <div class="hero">
-          <h1>Catálogo de películas</h1>
-          <p>Descubrí, puntuá y comentá. Iniciá sesión para participar.</p>
+        <section class="hero-shell">
+          <div class="hero-copy">
+            <p class="hero-kicker">Cartelera CineSocial</p>
+            <h1>Peliculas en cartelera</h1>
+            <p class="hero-text">Busca titulos, explora generos y revisa puntuaciones de la comunidad.</p>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Peliculas</div>
+              <div class="stat-value" id="total-peliculas">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Directores</div>
+              <div class="stat-value" id="total-directores">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Generos</div>
+              <div class="stat-value" id="total-generos">0</div>
+            </div>
+          </div>
+        </section>
+
+        <div class="marquee" aria-hidden="true">
+          <span>Drama</span>
+          <span>Thriller</span>
+          <span>Accion</span>
+          <span>Romance</span>
+          <span>Suspenso</span>
+          <span>Autor</span>
+          <span>Animacion</span>
+          <span>Documental</span>
         </div>
 
-        <div class="stats">
-          <div class="stat">
-            <div class="stat-label">Total películas</div>
-            <div class="stat-value" id="total-peliculas">0</div>
+        <section class="browse-panel">
+          <div class="section-heading">
+            <p class="section-kicker">Buscar en cartelera</p>
+            <div class="section-title-row">
+              <h2>Explorar catalogo</h2>
+              <span class="pill-count" id="pill-count">0 resultados</span>
+            </div>
           </div>
-          <div class="stat">
-            <div class="stat-label">Directores</div>
-            <div class="stat-value" id="total-directores">0</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Géneros</div>
-            <div class="stat-value" id="total-generos">0</div>
-          </div>
-        </div>
 
-        <div class="filtros">
-          <input type="search" id="input-busqueda" placeholder="Buscar por título..." />
-          <div class="select-wrap">
-            <select id="select-genero"><option value="">Todos los géneros</option></select>
+          <div class="filtros">
+            <input type="search" id="input-busqueda" placeholder="Buscar por titulo..." />
+            <div class="select-wrap">
+              <select id="select-genero"><option value="">Todos los generos</option></select>
+            </div>
+            <div class="select-wrap">
+              <select id="select-director"><option value="">Todos los directores</option></select>
+            </div>
+            <div class="select-wrap">
+              <select id="select-orden">
+                <option value="">Orden por defecto</option>
+                <option value="TITULO">Titulo (A-Z)</option>
+                <option value="ANIO">Mas recientes</option>
+                <option value="MEJOR_PUNTUADAS">Mejor puntuadas</option>
+                <option value="MAS_COMENTADAS">Mas comentadas</option>
+              </select>
+            </div>
           </div>
-          <div class="select-wrap">
-            <select id="select-director"><option value="">Todos los directores</option></select>
-          </div>
-          <div class="select-wrap">
-            <select id="select-orden">
-              <option value="">Orden por defecto</option>
-              <option value="TITULO">Título (A-Z)</option>
-              <option value="ANIO">Más recientes</option>
-              <option value="MEJOR_PUNTUADAS">Mejor puntuadas</option>
-              <option value="MAS_COMENTADAS">Más comentadas</option>
-            </select>
-          </div>
-        </div>
+        </section>
 
         <div class="section-header">
-          <h2>Películas</h2>
-          <span class="pill-count" id="pill-count">0 resultados</span>
-          <button class="btn btn-sm hidden" id="btn-abrir-agregar">+ Agregar película</button>
-          <button class="btn btn-sm hidden" id="btn-abrir-agregar-director">+ Agregar director</button>
+          <div>
+            <p class="section-kicker">Cartelera</p>
+            <h2>Peliculas</h2>
+          </div>
+          <div class="section-actions">
+            <button class="btn btn-sm hidden" id="btn-abrir-agregar">+ Agregar pelicula</button>
+            <button class="btn btn-sm hidden" id="btn-abrir-agregar-director">+ Agregar director</button>
+          </div>
         </div>
 
         <div class="grid-peliculas" id="grid-peliculas"></div>
       </section>
 
-      <!-- ====================== PERFIL ====================== -->
       <section id="vista-perfil" class="hidden">
-        <button class="btn-volver" id="btn-volver-catalogo">← Volver al catálogo</button>
+        <button class="btn-volver" id="btn-volver-catalogo">&larr; Volver al catalogo</button>
         <div class="perfil-card" id="perfil-contenido"></div>
       </section>
     </main>
 
-    <!-- ====================== MODAL AUTH ====================== -->
     <div class="modal-overlay hidden" id="modal-auth">
       <div class="modal">
-        <button class="modal-close" data-close="modal-auth">×</button>
+        <button class="modal-close" data-close="modal-auth">&times;</button>
         <div class="tabs">
           <button class="tab active" data-tab="login">Ingresar</button>
           <button class="tab" data-tab="registro">Registrarse</button>
@@ -94,8 +130,8 @@
             <input type="email" id="login-email" placeholder="tu@email.com" required />
           </div>
           <div class="field">
-            <label>Contraseña</label>
-            <input type="password" id="login-password" placeholder="••••••" required />
+            <label>Contrasena</label>
+            <input type="password" id="login-password" placeholder="******" required />
           </div>
           <button type="submit" class="btn btn-block">Ingresar</button>
           <p class="auth-msg" id="login-msg"></p>
@@ -112,8 +148,8 @@
             <input type="email" id="reg-email" placeholder="tu@email.com" required />
           </div>
           <div class="field">
-            <label>Contraseña</label>
-            <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" required />
+            <label>Contrasena</label>
+            <input type="password" id="reg-password" placeholder="Minimo 6 caracteres" required />
           </div>
           <button type="submit" class="btn btn-block">Crear cuenta</button>
           <p class="auth-msg" id="registro-msg"></p>
@@ -121,14 +157,13 @@
       </div>
     </div>
 
-    <!-- ====================== MODAL AGREGAR PELÍCULA (admin) ====================== -->
     <div class="modal-overlay hidden" id="modal-agregar">
       <div class="modal">
-        <button class="modal-close" data-close="modal-agregar">×</button>
-        <h2 class="modal-titulo">Agregar película <span class="badge-admin">admin</span></h2>
+        <button class="modal-close" data-close="modal-agregar">&times;</button>
+        <h2 class="modal-titulo">Agregar pelicula <span class="badge-admin">admin</span></h2>
         <form id="form-agregar" class="auth-form">
           <div class="field">
-            <label>Título</label>
+            <label>Titulo</label>
             <input type="text" id="titulo" placeholder="Ej: The Dark Knight" required />
           </div>
           <div class="field">
@@ -136,7 +171,7 @@
             <input type="number" id="anio" placeholder="Ej: 2008" required />
           </div>
           <div class="field">
-            <label>Género</label>
+            <label>Genero</label>
             <div class="select-wrap">
               <select id="genero" required></select>
             </div>
@@ -150,23 +185,23 @@
           <div class="field">
             <label>Poster (imagen)</label>
             <input type="file" id="poster" accept="image/*" />
+            <p class="field-help">Como admin puedes subir un poster al crear la pelicula.</p>
             <img id="poster-preview" class="poster-preview hidden" alt="Vista previa del poster" />
           </div>
-          <button type="submit" class="btn btn-block">Agregar película</button>
+          <button type="submit" class="btn btn-block">Agregar pelicula</button>
           <p class="auth-msg" id="agregar-msg"></p>
         </form>
       </div>
     </div>
 
-    <!-- ====================== MODAL EDITAR PELÍCULA (admin) ====================== -->
     <div class="modal-overlay hidden" id="modal-editar">
       <div class="modal">
-        <button class="modal-close" data-close="modal-editar">×</button>
-        <h2 class="modal-titulo">Editar película <span class="badge-admin">admin</span></h2>
+        <button class="modal-close" data-close="modal-editar">&times;</button>
+        <h2 class="modal-titulo">Editar pelicula <span class="badge-admin">admin</span></h2>
         <form id="form-editar" class="auth-form">
           <input type="hidden" id="editar-id" />
           <div class="field">
-            <label>Título</label>
+            <label>Titulo</label>
             <input type="text" id="editar-titulo" placeholder="Ej: The Dark Knight" required />
           </div>
           <div class="field">
@@ -174,7 +209,7 @@
             <input type="number" id="editar-anio" placeholder="Ej: 2008" required />
           </div>
           <div class="field">
-            <label>Género</label>
+            <label>Genero</label>
             <div class="select-wrap">
               <select id="editar-genero" required></select>
             </div>
@@ -186,8 +221,9 @@
             </div>
           </div>
           <div class="field">
-            <label>Poster (dejá vacío para conservar el actual)</label>
+            <label>Poster (deja vacio para conservar el actual)</label>
             <input type="file" id="editar-poster" accept="image/*" />
+            <p class="field-help">Si eliges una imagen nueva, reemplazara el poster actual.</p>
             <img id="editar-poster-preview" class="poster-preview hidden" alt="Vista previa del poster" />
           </div>
           <button type="submit" class="btn btn-block">Guardar cambios</button>
@@ -196,10 +232,9 @@
       </div>
     </div>
 
-    <!-- ====================== MODAL AGREGAR DIRECTOR (admin) ====================== -->
     <div class="modal-overlay hidden" id="modal-agregar-director">
       <div class="modal">
-        <button class="modal-close" data-close="modal-agregar-director">×</button>
+        <button class="modal-close" data-close="modal-agregar-director">&times;</button>
         <h2 class="modal-titulo">Agregar director <span class="badge-admin">admin</span></h2>
         <form id="form-agregar-director" class="auth-form">
           <div class="field">
@@ -212,11 +247,42 @@
       </div>
     </div>
 
-    <!-- ====================== MODAL DETALLE ====================== -->
     <div class="modal-overlay hidden" id="modal-detalle">
-      <div class="modal modal-lg">
-        <button class="modal-close" data-close="modal-detalle">×</button>
+      <div class="modal modal-xl">
+        <button class="modal-close" data-close="modal-detalle">&times;</button>
         <div id="detalle-contenido"></div>
+      </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="modal-confirmar-eliminar">
+      <div class="modal modal-confirm">
+        <button class="modal-close" data-close="modal-confirmar-eliminar">&times;</button>
+        <span class="confirm-kicker">Confirmar eliminacion</span>
+        <h2 class="modal-titulo">Eliminar pelicula</h2>
+        <p class="confirm-text">
+          Vas a eliminar <strong id="confirm-eliminar-titulo">esta pelicula</strong>. Esta accion no se puede deshacer.
+        </p>
+        <div class="confirm-actions">
+          <button type="button" class="btn-danger" id="btn-confirmar-eliminar">Eliminar</button>
+          <button type="button" class="btn-ghost" id="btn-cancelar-eliminar">Cancelar</button>
+        </div>
+        <p class="auth-msg" id="confirm-eliminar-msg"></p>
+      </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="modal-confirmar-comentario">
+      <div class="modal modal-confirm">
+        <button class="modal-close" data-close="modal-confirmar-comentario">&times;</button>
+        <span class="confirm-kicker">Eliminar comentario</span>
+        <h2 class="modal-titulo">¿Borrar este comentario?</h2>
+        <p class="confirm-text">
+          El comentario se va a quitar de la ficha de la pelicula. Esta accion no se puede deshacer.
+        </p>
+        <div class="confirm-actions">
+          <button type="button" class="btn-danger" id="btn-confirmar-comentario">Borrar comentario</button>
+          <button type="button" class="btn-ghost" id="btn-cancelar-comentario">Conservar</button>
+        </div>
+        <p class="auth-msg" id="confirm-comentario-msg"></p>
       </div>
     </div>
 

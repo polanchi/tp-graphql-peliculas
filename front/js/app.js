@@ -5,12 +5,15 @@ import * as api from "./api.js";
 let usuarioActual = null;
 let generosCache = [];
 let directoresCache = [];
+let peliculaPendienteEliminar = null;
+let comentarioPendienteEliminar = null;
 const filtros = { busqueda: "", genero: "", directorId: "", ordenarPor: "" };
+const TEMA_KEY = "cinesocial-tema";
+let temaActual = localStorage.getItem(TEMA_KEY) === "light" ? "light" : "dark";
 
 const $ = (sel) => document.querySelector(sel);
 const esAdmin = () => usuarioActual?.rol?.nombre === "admin";
 
-// Lee un archivo de imagen y lo devuelve como Data URL en base64.
 function leerArchivoComoBase64(archivo) {
   return new Promise((resolve, reject) => {
     const lector = new FileReader();
@@ -20,7 +23,40 @@ function leerArchivoComoBase64(archivo) {
   });
 }
 
-/* ============================ Sesión ============================ */
+function renderAvatar(usuario, clase = "avatar-sm") {
+  const nombre = escaparHtml(usuario?.nombre || "Usuario");
+  if (usuario?.avatar) {
+    return `<div class="avatar ${clase} avatar-foto" title="${nombre}">
+      <img src="${escaparHtml(usuario.avatar)}" alt="${nombre}" />
+    </div>`;
+  }
+  return `<div class="avatar ${clase}" title="${nombre}">${getIniciales(usuario?.nombre)}</div>`;
+}
+
+/* ============================ Tema ============================ */
+function textoBotonTema() {
+  return temaActual === "light" ? "Tema negro" : "Tema blanco";
+}
+
+function aplicarTema() {
+  document.body.dataset.theme = temaActual;
+  document.querySelectorAll("[data-toggle-tema]").forEach((btn) => {
+    btn.textContent = textoBotonTema();
+    btn.setAttribute("aria-label", `Cambiar a ${textoBotonTema().toLowerCase()}`);
+  });
+}
+
+function alternarTema() {
+  temaActual = temaActual === "light" ? "dark" : "light";
+  localStorage.setItem(TEMA_KEY, temaActual);
+  aplicarTema();
+}
+
+function renderBotonTema() {
+  return `<button class="btn-ghost btn-theme" data-toggle-tema type="button">${textoBotonTema()}</button>`;
+}
+
+/* ============================ Sesion ============================ */
 async function cargarSesion() {
   if (!api.obtenerToken()) {
     usuarioActual = null;
@@ -38,21 +74,27 @@ function renderNavAuth() {
   const nav = $("#nav-auth");
   if (usuarioActual) {
     nav.innerHTML = `
-      <div class="avatar avatar-sm" title="${escaparHtml(usuarioActual.nombre)}">${getIniciales(usuarioActual.nombre)}</div>
+      ${renderAvatar(usuarioActual)}
       <button class="btn-link" id="btn-perfil">Hola, ${escaparHtml(usuarioActual.nombre)}</button>
       ${esAdmin() ? '<span class="badge-admin">admin</span>' : ""}
+      ${renderBotonTema()}
       <button class="btn-ghost" id="btn-logout">Salir</button>
     `;
     $("#btn-perfil").addEventListener("click", mostrarPerfil);
     $("#btn-logout").addEventListener("click", cerrarSesion);
   } else {
     nav.innerHTML = `
+      ${renderBotonTema()}
       <button class="btn-ghost" id="btn-abrir-login">Ingresar</button>
       <button class="btn" id="btn-abrir-registro">Registrarse</button>
     `;
     $("#btn-abrir-login").addEventListener("click", () => abrirAuth("login"));
     $("#btn-abrir-registro").addEventListener("click", () => abrirAuth("registro"));
   }
+  document.querySelectorAll("[data-toggle-tema]").forEach((btn) => {
+    btn.addEventListener("click", alternarTema);
+  });
+  aplicarTema();
 }
 
 function cerrarSesion() {
@@ -68,12 +110,12 @@ function cerrarSesion() {
 function abrirModal(id) {
   $(`#${id}`).classList.remove("hidden");
 }
+
 function cerrarModal(id) {
   $(`#${id}`).classList.add("hidden");
 }
 
 function abrirAuth(tab) {
-  // Cerramos el detalle para que no quede visible detrás del modal de auth
   cerrarModal("modal-detalle");
   cambiarTab(tab);
   abrirModal("modal-auth");
@@ -83,6 +125,31 @@ function cambiarTab(tab) {
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tab));
   $("#form-login").classList.toggle("hidden", tab !== "login");
   $("#form-registro").classList.toggle("hidden", tab !== "registro");
+}
+
+function abrirConfirmacionEliminar(pelicula) {
+  peliculaPendienteEliminar = pelicula;
+  $("#confirm-eliminar-titulo").textContent = `"${pelicula.titulo}"`;
+  $("#confirm-eliminar-msg").textContent = "";
+  abrirModal("modal-confirmar-eliminar");
+}
+
+function cerrarConfirmacionEliminar() {
+  peliculaPendienteEliminar = null;
+  $("#confirm-eliminar-msg").textContent = "";
+  cerrarModal("modal-confirmar-eliminar");
+}
+
+function abrirConfirmacionEliminarComentario({ comentarioId, peliculaId }) {
+  comentarioPendienteEliminar = { comentarioId, peliculaId };
+  $("#confirm-comentario-msg").textContent = "";
+  abrirModal("modal-confirmar-comentario");
+}
+
+function cerrarConfirmacionEliminarComentario() {
+  comentarioPendienteEliminar = null;
+  $("#confirm-comentario-msg").textContent = "";
+  cerrarModal("modal-confirmar-comentario");
 }
 
 /* ============================ Vistas ============================ */
@@ -97,55 +164,255 @@ async function mostrarPerfil() {
     const perfil = await api.obtenerMe();
     usuarioActual = perfil;
     const cont = $("#perfil-contenido");
+
     const comentarios = perfil.comentarios
       .map(
-        (c) => `<li>“${escaparHtml(c.texto)}” <span class="muted">en ${escaparHtml(c.pelicula?.titulo || "—")} · ${formatearFecha(c.creadoEn)}</span></li>`
+        (c) => `
+          <li class="perfil-activity-item">
+            <strong>${escaparHtml(c.pelicula?.titulo || "Sin pelicula")}</strong>
+            <p>"${escaparHtml(c.texto)}"</p>
+            <span class="perfil-activity-date">${formatearFecha(c.creadoEn)}</span>
+          </li>
+        `
       )
       .join("");
+
     const calificaciones = perfil.calificaciones
       .map(
-        (c) => `<li><span class="estrellas-mini">${estrellasTexto(c.estrellas)}</span> ${escaparHtml(c.pelicula?.titulo || "—")}</li>`
+        (c) => `
+          <li class="perfil-activity-item">
+            <strong>${escaparHtml(c.pelicula?.titulo || "Sin pelicula")}</strong>
+            <span class="estrellas-mini">${estrellasTexto(c.estrellas)}</span>
+          </li>
+        `
       )
       .join("");
 
     cont.innerHTML = `
-      <div class="perfil-header">
-        <div class="avatar avatar-lg">${getIniciales(perfil.nombre)}</div>
-        <div class="perfil-info">
-          <h2>${escaparHtml(perfil.nombre)} ${esAdmin() ? '<span class="badge-admin">admin</span>' : ""}</h2>
-          <p class="muted">${escaparHtml(perfil.email)}</p>
-          <p>${escaparHtml(perfil.bio || "Sin biografía todavía.")}</p>
-        </div>
-        <button class="btn-ghost btn-sm" id="btn-editar-perfil">Editar perfil</button>
+      <div class="perfil-layout">
+        <aside class="perfil-side">
+          <div class="perfil-header">
+            ${renderAvatar(perfil, "avatar-lg")}
+            <div class="perfil-info">
+              <span class="perfil-meta">Miembro de CineSocial</span>
+              <h2>${escaparHtml(perfil.nombre)} ${esAdmin() ? '<span class="badge-admin">admin</span>' : ""}</h2>
+              <p class="muted">${escaparHtml(perfil.email)}</p>
+            </div>
+          </div>
+
+          <div class="perfil-bio-box">
+            <span class="perfil-meta">Sobre mi</span>
+            <p class="perfil-bio">${escaparHtml(perfil.bio || "Sin biografia todavia. Completa tu perfil para contar que tipo de cine te gusta.")}</p>
+          </div>
+
+          <div class="perfil-stats">
+            <div class="perfil-stat-box">
+              <span class="perfil-meta">Comentarios</span>
+              <strong>${perfil.cantidadComentarios}</strong>
+            </div>
+            <div class="perfil-stat-box">
+              <span class="perfil-meta">Puntuaciones</span>
+              <strong>${perfil.cantidadCalificaciones}</strong>
+            </div>
+          </div>
+
+          <div class="perfil-ticket">
+            <div class="detalle-fact">
+              <span>Perfil</span>
+              <strong>${esAdmin() ? "Administrador" : "Usuario"}</strong>
+            </div>
+            <div class="detalle-fact">
+              <span>Actividad</span>
+              <strong>Critica y comunidad</strong>
+            </div>
+          </div>
+
+          <button class="btn btn-sm btn-block" id="btn-editar-perfil">Editar perfil</button>
+        </aside>
+
+        <section class="perfil-main">
+          <div class="perfil-main-header">
+            <div>
+              <span class="section-kicker">Sala personal</span>
+              <h3>Tu actividad cinefila</h3>
+              <p class="muted">Administra tu nombre, biografia y revisa tus comentarios y puntuaciones dentro del catalogo.</p>
+            </div>
+            <button class="btn-ghost btn-sm perfil-edit-shortcut" id="btn-editar-perfil-main">Editar datos</button>
+          </div>
+
+          <form id="form-editar-perfil" class="form-editar-perfil hidden">
+            <div class="perfil-form-heading">
+              <div>
+                <span class="perfil-meta">Editar credencial</span>
+                <h3>Datos del perfil</h3>
+              </div>
+              <span class="perfil-form-note">Se muestra en tus comentarios</span>
+            </div>
+            <div class="field">
+              <label for="editar-nombre">Nombre</label>
+              <input id="editar-nombre" type="text" maxlength="100" value="${escaparHtml(perfil.nombre)}" required />
+            </div>
+            <div class="field">
+              <label for="editar-bio">Biografia</label>
+              <textarea id="editar-bio" rows="3" maxlength="500" placeholder="Contanos algo sobre vos...">${escaparHtml(perfil.bio || "")}</textarea>
+            </div>
+            <div class="field">
+              <label for="editar-avatar">Foto de perfil</label>
+              <input id="editar-avatar" type="file" accept="image/*" />
+              <p class="field-help">Subi una imagen JPG, PNG, WEBP, GIF o AVIF. Si no elegis una nueva, se conserva la actual.</p>
+              <img id="editar-avatar-preview" class="avatar-preview ${perfil.avatar ? "" : "hidden"}" src="${escaparHtml(perfil.avatar || "")}" alt="Vista previa de foto de perfil" />
+            </div>
+            <div class="form-editar-acciones">
+              <button type="submit" class="btn btn-sm">Guardar cambios</button>
+              <button type="button" class="btn-ghost btn-sm" id="btn-cancelar-editar">Cancelar</button>
+            </div>
+            <p class="auth-msg" id="editar-perfil-msg"></p>
+          </form>
+
+          <div class="perfil-col">
+            <div class="perfil-list-card">
+              <div class="perfil-list-head">
+                <h3>Mis comentarios</h3>
+                <span class="perfil-list-count">${perfil.cantidadComentarios}</span>
+              </div>
+              <ul class="lista-perfil">${comentarios || "<li class='muted'>Todavia no comentaste nada.</li>"}</ul>
+            </div>
+            <div class="perfil-list-card">
+              <div class="perfil-list-head">
+                <h3>Mis puntuaciones</h3>
+                <span class="perfil-list-count">${perfil.cantidadCalificaciones}</span>
+              </div>
+              <ul class="lista-perfil">${calificaciones || "<li class='muted'>Todavia no puntuaste nada.</li>"}</ul>
+            </div>
+          </div>
+        </section>
       </div>
-      <form id="form-editar-perfil" class="form-editar-perfil hidden">
-        <div class="field">
-          <label for="editar-nombre">Nombre</label>
-          <input id="editar-nombre" type="text" maxlength="100" value="${escaparHtml(perfil.nombre)}" required />
-        </div>
-        <div class="field">
-          <label for="editar-bio">Biografía</label>
-          <textarea id="editar-bio" rows="3" maxlength="500" placeholder="Contanos algo sobre vos...">${escaparHtml(perfil.bio || "")}</textarea>
-        </div>
-        <div class="form-editar-acciones">
-          <button type="submit" class="btn btn-sm">Guardar cambios</button>
-          <button type="button" class="btn-ghost btn-sm" id="btn-cancelar-editar">Cancelar</button>
-        </div>
-        <p class="auth-msg" id="editar-perfil-msg"></p>
-      </form>
-      <div class="perfil-stats">
-        <div><strong>${perfil.cantidadComentarios}</strong> comentarios</div>
-        <div><strong>${perfil.cantidadCalificaciones}</strong> puntuaciones</div>
-      </div>
-      <div class="perfil-col">
-        <div>
-          <h3>Mis comentarios</h3>
-          <ul class="lista-perfil">${comentarios || "<li class='muted'>Todavía no comentaste nada.</li>"}</ul>
-        </div>
-        <div>
-          <h3>Mis puntuaciones</h3>
-          <ul class="lista-perfil">${calificaciones || "<li class='muted'>Todavía no puntuaste nada.</li>"}</ul>
-        </div>
+    `;
+
+    const mostrarEditorPerfil = () => {
+      $("#form-editar-perfil").classList.remove("hidden");
+      $("#btn-editar-perfil").classList.add("hidden");
+      $("#btn-editar-perfil-main").classList.add("hidden");
+      $("#editar-nombre").focus();
+    };
+
+    $("#btn-editar-perfil").addEventListener("click", mostrarEditorPerfil);
+    $("#btn-editar-perfil-main").addEventListener("click", mostrarEditorPerfil);
+    $("#btn-cancelar-editar").addEventListener("click", () => {
+      $("#form-editar-perfil").classList.add("hidden");
+      $("#btn-editar-perfil").classList.remove("hidden");
+      $("#btn-editar-perfil-main").classList.remove("hidden");
+      $("#editar-perfil-msg").textContent = "";
+    });
+    $("#editar-avatar").addEventListener("change", async (e) => {
+      const archivo = e.target.files[0];
+      const preview = $("#editar-avatar-preview");
+      if (archivo) {
+        preview.src = await leerArchivoComoBase64(archivo);
+        preview.classList.remove("hidden");
+      } else {
+        preview.src = perfil.avatar || "";
+        preview.classList.toggle("hidden", !perfil.avatar);
+      }
+    });
+    $("#form-editar-perfil").addEventListener("submit", manejarEditarPerfil);
+
+    $("#vista-catalogo").classList.add("hidden");
+    $("#vista-perfil").classList.remove("hidden");
+  } catch (error) {
+    alert("Error al cargar el perfil: " + error.message);
+  }
+}
+
+async function mostrarPerfilAnterior() {
+  if (!usuarioActual) return;
+  try {
+    const perfil = await api.obtenerMe();
+    usuarioActual = perfil;
+    const cont = $("#perfil-contenido");
+
+    const comentarios = perfil.comentarios
+      .map(
+        (c) =>
+          `<li><strong>${escaparHtml(c.pelicula?.titulo || "Sin pelicula")}</strong><br /><span class="muted">"${escaparHtml(c.texto)}" · ${formatearFecha(c.creadoEn)}</span></li>`
+      )
+      .join("");
+
+    const calificaciones = perfil.calificaciones
+      .map(
+        (c) =>
+          `<li><strong>${escaparHtml(c.pelicula?.titulo || "Sin pelicula")}</strong><br /><span class="estrellas-mini">${estrellasTexto(c.estrellas)}</span></li>`
+      )
+      .join("");
+
+    cont.innerHTML = `
+      <div class="perfil-layout">
+        <aside class="perfil-side">
+          <div class="perfil-header">
+            <div class="avatar avatar-lg">${getIniciales(perfil.nombre)}</div>
+            <div class="perfil-info">
+              <span class="perfil-meta">Miembro de CineSocial</span>
+              <h2>${escaparHtml(perfil.nombre)} ${esAdmin() ? '<span class="badge-admin">admin</span>' : ""}</h2>
+              <p class="muted">${escaparHtml(perfil.email)}</p>
+            </div>
+          </div>
+
+          <p class="perfil-bio">${escaparHtml(perfil.bio || "Sin biografia todavia. Completa tu perfil para contar que tipo de cine te gusta.")}</p>
+
+          <div class="perfil-stats">
+            <div class="perfil-stat-box">
+              <span class="perfil-meta">Comentarios</span>
+              <strong>${perfil.cantidadComentarios}</strong>
+            </div>
+            <div class="perfil-stat-box">
+              <span class="perfil-meta">Puntuaciones</span>
+              <strong>${perfil.cantidadCalificaciones}</strong>
+            </div>
+          </div>
+
+          <div class="detalle-fact">
+            <span>Perfil</span>
+            <strong>${esAdmin() ? "Administrador" : "Usuario"}</strong>
+          </div>
+          <div class="detalle-fact">
+            <span>Actividad</span>
+            <strong>Critica y comunidad</strong>
+          </div>
+
+          <button class="btn-ghost btn-sm" id="btn-editar-perfil">Editar perfil</button>
+        </aside>
+
+        <section class="perfil-main">
+          <h3>Tu sala personal</h3>
+          <p class="muted">Tu perfil reune comentarios, puntuaciones y actividad dentro del catalogo.</p>
+
+          <form id="form-editar-perfil" class="form-editar-perfil hidden">
+            <div class="field">
+              <label for="editar-nombre">Nombre</label>
+              <input id="editar-nombre" type="text" maxlength="100" value="${escaparHtml(perfil.nombre)}" required />
+            </div>
+            <div class="field">
+              <label for="editar-bio">Biografia</label>
+              <textarea id="editar-bio" rows="3" maxlength="500" placeholder="Contanos algo sobre vos...">${escaparHtml(perfil.bio || "")}</textarea>
+            </div>
+            <div class="form-editar-acciones">
+              <button type="submit" class="btn btn-sm">Guardar cambios</button>
+              <button type="button" class="btn-ghost btn-sm" id="btn-cancelar-editar">Cancelar</button>
+            </div>
+            <p class="auth-msg" id="editar-perfil-msg"></p>
+          </form>
+
+          <div class="perfil-col">
+            <div class="perfil-list-card">
+              <h3>Mis comentarios</h3>
+              <ul class="lista-perfil">${comentarios || "<li class='muted'>Todavia no comentaste nada.</li>"}</ul>
+            </div>
+            <div class="perfil-list-card">
+              <h3>Mis puntuaciones</h3>
+              <ul class="lista-perfil">${calificaciones || "<li class='muted'>Todavia no puntuaste nada.</li>"}</ul>
+            </div>
+          </div>
+        </section>
       </div>
     `;
 
@@ -173,12 +440,14 @@ async function manejarEditarPerfil(e) {
   msg.textContent = "";
   const nombre = $("#editar-nombre").value.trim();
   const bio = $("#editar-bio").value.trim();
+  const archivoAvatar = $("#editar-avatar")?.files[0];
   if (!nombre) {
-    msg.textContent = "El nombre no puede estar vacío.";
+    msg.textContent = "El nombre no puede estar vacio.";
     return;
   }
   try {
-    await api.actualizarPerfil({ nombre, bio });
+    const avatar = archivoAvatar ? await leerArchivoComoBase64(archivoAvatar) : null;
+    await api.actualizarPerfil({ nombre, bio, avatar });
     await mostrarPerfil();
     renderNavAuth();
   } catch (error) {
@@ -186,13 +455,13 @@ async function manejarEditarPerfil(e) {
   }
 }
 
-/* ============================ Catálogo ============================ */
+/* ============================ Catalogo ============================ */
 async function cargarFiltros() {
   try {
     [generosCache, directoresCache] = await Promise.all([api.obtenerGeneros(), api.obtenerDirectores()]);
-    const selGenero = $("#select-genero");
-    selGenero.innerHTML =
-      '<option value="">Todos los géneros</option>' +
+
+    $("#select-genero").innerHTML =
+      '<option value="">Todos los generos</option>' +
       generosCache.map((g) => `<option value="${escaparHtml(g)}">${escaparHtml(g)}</option>`).join("");
 
     const optsGenero = generosCache
@@ -202,33 +471,25 @@ async function cargarFiltros() {
       .map((d) => `<option value="${d.id}">${escaparHtml(d.nombre)}</option>`)
       .join("");
 
-    const selFormGenero = $("#genero");
-    if (selFormGenero) {
-      selFormGenero.innerHTML = '<option value="" disabled selected>Elegí un género</option>' + optsGenero;
+    if ($("#genero")) {
+      $("#genero").innerHTML = '<option value="" disabled selected>Elegi un genero</option>' + optsGenero;
     }
-
-    const selDirector = $("#directorId");
-    if (selDirector) {
-      selDirector.innerHTML = optsDirector;
+    if ($("#directorId")) {
+      $("#directorId").innerHTML = optsDirector;
     }
-
-    const selEditarGenero = $("#editar-genero");
-    if (selEditarGenero) {
-      selEditarGenero.innerHTML = optsGenero;
+    if ($("#editar-genero")) {
+      $("#editar-genero").innerHTML = optsGenero;
     }
-
-    const selEditarDirector = $("#editar-directorId");
-    if (selEditarDirector) {
-      selEditarDirector.innerHTML = optsDirector;
+    if ($("#editar-directorId")) {
+      $("#editar-directorId").innerHTML = optsDirector;
     }
-
-    const selFiltroDirector = $("#select-director");
-    if (selFiltroDirector) {
-      selFiltroDirector.innerHTML =
+    if ($("#select-director")) {
+      $("#select-director").innerHTML =
         '<option value="">Todos los directores</option>' +
         directoresCache.map((d) => `<option value="${d.id}">${escaparHtml(d.nombre)}</option>`).join("");
-      selFiltroDirector.value = filtros.directorId;
+      $("#select-director").value = filtros.directorId;
     }
+
     $("#total-directores").textContent = directoresCache.length;
     $("#total-generos").textContent = generosCache.length;
   } catch (error) {
@@ -243,7 +504,7 @@ async function renderizarPeliculas() {
     grid.innerHTML = "";
 
     if (peliculas.length === 0) {
-      grid.innerHTML = '<p class="muted">No se encontraron películas con esos filtros.</p>';
+      grid.innerHTML = '<p class="muted">No se encontraron peliculas con esos filtros.</p>';
     }
 
     peliculas.forEach((p) => {
@@ -252,17 +513,23 @@ async function renderizarPeliculas() {
       const posterHtml = p.poster
         ? `<div class="card-poster"><img src="${escaparHtml(p.poster)}" alt="${escaparHtml(p.titulo)}" loading="lazy" /></div>`
         : `<div class="card-poster" style="${getColor(p.genero)}">${getIniciales(p.titulo)}</div>`;
+
       card.innerHTML = `
         ${posterHtml}
         <div class="card-body">
+          <div class="card-kicker">
+            <span class="card-year">${p.anio}</span>
+            <span class="badge" style="${getColor(p.genero)}">${escaparHtml(p.genero)}</span>
+          </div>
           <h3>${escaparHtml(p.titulo)}</h3>
-          <p class="muted">${p.anio} · ${escaparHtml(p.director.nombre)}</p>
-          <span class="badge" style="${getColor(p.genero)}">${escaparHtml(p.genero)}</span>
+          <p>${escaparHtml(p.director.nombre)}</p>
           <div class="card-meta">
-            <span class="estrellas-mini">${estrellasTexto(p.promedioEstrellas)}</span>
-            <span class="muted">${p.promedioEstrellas} (${p.cantidadVotos})</span>
-            <span class="muted">💬 ${p.cantidadComentarios}</span>
-            <span class="muted">${p.meGusta ? "❤️" : "🤍"} ${p.cantidadLikes}</span>
+            <span class="meta-pill"><span class="estrellas-mini">${estrellasTexto(p.promedioEstrellas)}</span> ${p.promedioEstrellas}</span>
+            <span class="meta-pill">${p.cantidadVotos} votos</span>
+          </div>
+          <div class="card-stats">
+            <span class="meta-pill">${p.cantidadComentarios} comentarios</span>
+            <span class="meta-pill">${p.cantidadLikes} likes</span>
           </div>
         </div>
       `;
@@ -273,8 +540,8 @@ async function renderizarPeliculas() {
     $("#total-peliculas").textContent = peliculas.length;
     $("#pill-count").textContent = `${peliculas.length} resultados`;
   } catch (error) {
-    console.error("Error al cargar películas:", error);
-    grid.innerHTML = '<p class="muted">Error al cargar las películas. Verificá que el servidor esté corriendo.</p>';
+    console.error("Error al cargar peliculas:", error);
+    grid.innerHTML = '<p class="muted">Error al cargar las peliculas. Verifica que el servidor este corriendo.</p>';
   }
 }
 
@@ -285,13 +552,13 @@ async function abrirDetalle(id) {
     renderDetalle(p);
     abrirModal("modal-detalle");
   } catch (error) {
-    alert("Error al cargar la película: " + error.message);
+    alert("Error al cargar la pelicula: " + error.message);
   }
 }
 
 function renderEstrellasInteractivas(pelicula) {
   if (!usuarioActual) {
-    return '<p class="muted">Iniciá sesión para puntuar.</p>';
+    return '<p class="muted">Inicia sesion para puntuar.</p>';
   }
   let html = '<div class="rating-widget" id="rating-widget">';
   for (let i = 1; i <= 5; i++) {
@@ -306,16 +573,16 @@ function renderComentario(c) {
   const puedeBorrar = usuarioActual && (String(c.usuario.id) === String(usuarioActual.id) || esAdmin());
   return `
     <li class="comentario" data-id="${c.id}">
-      <div class="avatar avatar-sm">${getIniciales(c.usuario.nombre)}</div>
+      ${renderAvatar(c.usuario)}
       <div class="comentario-cuerpo">
         <div class="comentario-head">
           <strong>${escaparHtml(c.usuario.nombre)}</strong>
           ${c.usuario.rol?.nombre === "admin" ? '<span class="badge-admin">admin</span>' : ""}
-          <span class="muted">${formatearFecha(c.creadoEn)}</span>
+          <span class="comentario-time">${formatearFecha(c.creadoEn)}</span>
         </div>
         <p>${escaparHtml(c.texto)}</p>
         <div class="comentario-acciones">
-          <button class="btn-like" data-like-comentario="${c.id}">${c.meGusta ? "❤️" : "🤍"} ${c.cantidadLikes}</button>
+          <button class="btn-like" data-like-comentario="${c.id}">${c.meGusta ? "Te gusta" : "Me gusta"} · ${c.cantidadLikes}</button>
           ${puedeBorrar ? `<button class="btn-link-danger" data-borrar-comentario="${c.id}">Borrar</button>` : ""}
         </div>
       </div>
@@ -326,51 +593,87 @@ function renderComentario(c) {
 function renderDetalle(p) {
   const cont = $("#detalle-contenido");
   const comentariosHtml = p.comentarios.map(renderComentario).join("");
+  const detalleBackdrop = p.poster
+    ? `style="background-image:url('${escaparHtml(p.poster)}')"`
+    : `style="${getColor(p.genero)}"`;
 
   const posterDetalleHtml = p.poster
     ? `<div class="card-poster grande"><img src="${escaparHtml(p.poster)}" alt="${escaparHtml(p.titulo)}" /></div>`
     : `<div class="card-poster grande" style="${getColor(p.genero)}">${getIniciales(p.titulo)}</div>`;
 
   cont.innerHTML = `
-    <div class="detalle-header">
-      ${posterDetalleHtml}
-      <div>
-        <h2>${escaparHtml(p.titulo)} <span class="muted">(${p.anio})</span></h2>
-        <p class="muted">Dirigida por ${escaparHtml(p.director.nombre)}</p>
-        <span class="badge" style="${getColor(p.genero)}">${escaparHtml(p.genero)}</span>
-        <div class="detalle-rating">
-          <span class="estrellas-grandes">${estrellasTexto(p.promedioEstrellas)}</span>
-          <strong>${p.promedioEstrellas}</strong>
-          <span class="muted">(${p.cantidadVotos} votos)</span>
-          <button class="btn-like grande" id="btn-like-pelicula">${p.meGusta ? "❤️" : "🤍"} ${p.cantidadLikes}</button>
+    <section class="detalle-hero">
+      <div class="detalle-backdrop" ${detalleBackdrop}></div>
+      <div class="detalle-header">
+        ${posterDetalleHtml}
+        <div class="detalle-copy">
+          <span class="hero-kicker">Ficha tecnica</span>
+          <h2>${escaparHtml(p.titulo)}</h2>
+          <p class="detalle-subline">${p.anio} · Dirigida por ${escaparHtml(p.director.nombre)}</p>
+          <div class="detalle-meta-line">
+            <span class="badge" style="${getColor(p.genero)}">${escaparHtml(p.genero)}</span>
+            <span class="meta-pill">${p.cantidadComentarios} comentarios</span>
+            <span class="meta-pill">${p.cantidadLikes} likes</span>
+          </div>
+          <div class="detalle-rating">
+            <div class="rating-badge">
+              <span class="estrellas-grandes">${estrellasTexto(p.promedioEstrellas)}</span>
+              <strong>${p.promedioEstrellas}</strong>
+              <span>${p.cantidadVotos} votos</span>
+            </div>
+            <button class="btn-like grande" id="btn-like-pelicula">${p.meGusta ? "Te gusta" : "Me gusta"} · ${p.cantidadLikes}</button>
+          </div>
+          ${
+            esAdmin()
+              ? `<div class="detalle-admin-acciones">
+                   <button class="btn-ghost btn-sm" id="btn-editar-pelicula">Editar pelicula</button>
+                   <button class="btn-link-danger" id="btn-eliminar-pelicula">Eliminar pelicula</button>
+                 </div>`
+              : ""
+          }
         </div>
-        ${
-          esAdmin()
-            ? `<div class="detalle-admin-acciones">
-                 <button class="btn-ghost btn-sm" id="btn-editar-pelicula">Editar película</button>
-                 <button class="btn-link-danger" id="btn-eliminar-pelicula">Eliminar película</button>
-               </div>`
-            : ""
-        }
       </div>
-    </div>
+    </section>
 
-    <div class="detalle-seccion">
-      <h3>Tu puntuación</h3>
-      ${renderEstrellasInteractivas(p)}
-    </div>
+    <div class="detalle-grid">
+      <aside class="detalle-panel">
+        <div>
+          <span class="perfil-meta">Valoracion</span>
+          <h3>Puntuacion del publico</h3>
+          <p class="muted">Mira el promedio de votos, los comentarios y deja tu propia calificacion.</p>
+        </div>
+        <div class="detalle-fact">
+          <span>Genero</span>
+          <strong>${escaparHtml(p.genero)}</strong>
+        </div>
+        <div class="detalle-fact">
+          <span>Director</span>
+          <strong>${escaparHtml(p.director.nombre)}</strong>
+        </div>
+        <div class="detalle-fact">
+          <span>Likes</span>
+          <strong>${p.cantidadLikes}</strong>
+        </div>
+        <div class="detalle-fact">
+          <span>Tu puntuacion</span>
+          ${renderEstrellasInteractivas(p)}
+        </div>
+      </aside>
 
-    <div class="detalle-seccion">
-      <h3>Comentarios (${p.cantidadComentarios})</h3>
-      ${
-        usuarioActual
-          ? `<form id="form-comentario" class="form-comentario">
-               <textarea id="texto-comentario" placeholder="Escribí tu comentario..." required></textarea>
-               <button type="submit" class="btn">Comentar</button>
-             </form>`
-          : '<p class="muted">Iniciá sesión para dejar un comentario.</p>'
-      }
-      <ul class="lista-comentarios" id="lista-comentarios">${comentariosHtml || '<li class="muted">Todavía no hay comentarios. ¡Sé el primero!</li>'}</ul>
+      <div>
+        <div class="detalle-seccion">
+          <h3>Comentarios (${p.cantidadComentarios})</h3>
+          ${
+            usuarioActual
+              ? `<form id="form-comentario" class="form-comentario">
+                   <textarea id="texto-comentario" placeholder="Escribe tu comentario..." required></textarea>
+                   <button type="submit" class="btn">Publicar comentario</button>
+                 </form>`
+              : '<p class="muted">Inicia sesion para dejar un comentario.</p>'
+          }
+          <ul class="lista-comentarios" id="lista-comentarios">${comentariosHtml || '<li class="muted">Todavia no hay comentarios. Se el primero.</li>'}</ul>
+        </div>
+      </div>
     </div>
   `;
 
@@ -378,14 +681,13 @@ function renderDetalle(p) {
 }
 
 function conectarEventosDetalle(p) {
-  // Like a la película
   const btnLike = $("#btn-like-pelicula");
   if (btnLike) {
     btnLike.addEventListener("click", async () => {
       if (!usuarioActual) return abrirAuth("login");
       try {
         const r = await api.toggleLikePelicula(p.id);
-        btnLike.textContent = `${r.meGusta ? "❤️" : "🤍"} ${r.cantidadLikes}`;
+        btnLike.textContent = `${r.meGusta ? "Te gusta" : "Me gusta"} · ${r.cantidadLikes}`;
         renderizarPeliculas();
       } catch (error) {
         alert(error.message);
@@ -393,26 +695,15 @@ function conectarEventosDetalle(p) {
     });
   }
 
-  // Acciones de administración: editar / eliminar película
   const btnEditar = $("#btn-editar-pelicula");
   if (btnEditar) {
     btnEditar.addEventListener("click", () => abrirEditarPelicula(p));
   }
   const btnEliminar = $("#btn-eliminar-pelicula");
   if (btnEliminar) {
-    btnEliminar.addEventListener("click", async () => {
-      if (!confirm(`¿Eliminar la película "${p.titulo}"? Esta acción no se puede deshacer.`)) return;
-      try {
-        await api.eliminarPelicula(p.id);
-        cerrarModal("modal-detalle");
-        await renderizarPeliculas();
-      } catch (error) {
-        alert("Error al eliminar la película: " + error.message);
-      }
-    });
+    btnEliminar.addEventListener("click", () => abrirConfirmacionEliminar(p));
   }
 
-  // Puntuar con estrellas
   const widget = $("#rating-widget");
   if (widget) {
     widget.querySelectorAll(".estrella").forEach((est) => {
@@ -429,7 +720,6 @@ function conectarEventosDetalle(p) {
     });
   }
 
-  // Nuevo comentario
   const form = $("#form-comentario");
   if (form) {
     form.addEventListener("submit", async (e) => {
@@ -446,7 +736,6 @@ function conectarEventosDetalle(p) {
     });
   }
 
-  // Likes y borrado de comentarios (delegación)
   const lista = $("#lista-comentarios");
   if (lista) {
     lista.addEventListener("click", async (e) => {
@@ -456,19 +745,15 @@ function conectarEventosDetalle(p) {
         if (!usuarioActual) return abrirAuth("login");
         try {
           const r = await api.toggleLikeComentario(likeBtn.dataset.likeComentario);
-          likeBtn.textContent = `${r.meGusta ? "❤️" : "🤍"} ${r.cantidadLikes}`;
+          likeBtn.textContent = `${r.meGusta ? "Te gusta" : "Me gusta"} · ${r.cantidadLikes}`;
         } catch (error) {
           alert(error.message);
         }
       } else if (borrarBtn) {
-        if (!confirm("¿Borrar este comentario?")) return;
-        try {
-          await api.eliminarComentario(borrarBtn.dataset.borrarComentario);
-          await abrirDetalle(p.id);
-          renderizarPeliculas();
-        } catch (error) {
-          alert(error.message);
-        }
+        abrirConfirmacionEliminarComentario({
+          comentarioId: borrarBtn.dataset.borrarComentario,
+          peliculaId: p.id,
+        });
       }
     });
   }
@@ -520,7 +805,6 @@ async function manejarRegistro(e) {
 
 /* ============================ Admin ============================ */
 function aplicarPermisosAdmin() {
-  // Los botones de administración solo están disponibles para administradores.
   $("#btn-abrir-agregar").classList.toggle("hidden", !esAdmin());
   $("#btn-abrir-agregar-director").classList.toggle("hidden", !esAdmin());
   if (!esAdmin()) {
@@ -540,7 +824,7 @@ async function manejarAgregarPelicula(e) {
   const directorId = $("#directorId").value;
   const archivoPoster = $("#poster").files[0];
   if (!titulo || !anio || !genero || !directorId) {
-    msg.textContent = "Completá todos los campos.";
+    msg.textContent = "Completa todos los campos.";
     return;
   }
   try {
@@ -552,7 +836,7 @@ async function manejarAgregarPelicula(e) {
     await cargarFiltros();
     await renderizarPeliculas();
   } catch (error) {
-    msg.textContent = "Error al agregar la película: " + error.message;
+    msg.textContent = "Error al agregar la pelicula: " + error.message;
   }
 }
 
@@ -586,7 +870,7 @@ async function manejarEditarPelicula(e) {
   const directorId = $("#editar-directorId").value;
   const archivoPoster = $("#editar-poster").files[0];
   if (!titulo || !anio || !genero || !directorId) {
-    msg.textContent = "Completá todos los campos.";
+    msg.textContent = "Completa todos los campos.";
     return;
   }
   try {
@@ -596,7 +880,7 @@ async function manejarEditarPelicula(e) {
     await renderizarPeliculas();
     await abrirDetalle(id);
   } catch (error) {
-    msg.textContent = "Error al editar la película: " + error.message;
+    msg.textContent = "Error al editar la pelicula: " + error.message;
   }
 }
 
@@ -606,7 +890,7 @@ async function manejarAgregarDirector(e) {
   msg.textContent = "";
   const nombre = $("#director-nombre").value.trim();
   if (!nombre) {
-    msg.textContent = "Ingresá el nombre del director.";
+    msg.textContent = "Ingresa el nombre del director.";
     return;
   }
   try {
@@ -619,19 +903,63 @@ async function manejarAgregarDirector(e) {
   }
 }
 
+async function manejarConfirmarEliminarPelicula() {
+  if (!peliculaPendienteEliminar) return;
+
+  const msg = $("#confirm-eliminar-msg");
+  const btn = $("#btn-confirmar-eliminar");
+  msg.textContent = "";
+  btn.disabled = true;
+  btn.textContent = "Eliminando...";
+
+  try {
+    await api.eliminarPelicula(peliculaPendienteEliminar.id);
+    cerrarConfirmacionEliminar();
+    cerrarModal("modal-detalle");
+    await renderizarPeliculas();
+  } catch (error) {
+    msg.textContent = "Error al eliminar la pelicula: " + error.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Eliminar";
+  }
+}
+
+async function manejarConfirmarEliminarComentario() {
+  if (!comentarioPendienteEliminar) return;
+
+  const msg = $("#confirm-comentario-msg");
+  const btn = $("#btn-confirmar-comentario");
+  msg.textContent = "";
+  btn.disabled = true;
+  btn.textContent = "Borrando...";
+
+  try {
+    await api.eliminarComentario(comentarioPendienteEliminar.comentarioId);
+    const peliculaId = comentarioPendienteEliminar.peliculaId;
+    cerrarConfirmacionEliminarComentario();
+    await abrirDetalle(peliculaId);
+    renderizarPeliculas();
+  } catch (error) {
+    msg.textContent = "Error al borrar el comentario: " + error.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Borrar comentario";
+  }
+}
+
 /* ============================ Init ============================ */
 function conectarEventosGlobales() {
-  // Cerrar modales (botón × y click en overlay)
   document.querySelectorAll("[data-close]").forEach((btn) => {
     btn.addEventListener("click", () => cerrarModal(btn.dataset.close));
   });
+
   document.querySelectorAll(".modal-overlay").forEach((overlay) => {
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) overlay.classList.add("hidden");
     });
   });
 
-  // Tabs de auth
   document.querySelectorAll(".tab").forEach((t) => {
     t.addEventListener("click", () => cambiarTab(t.dataset.tab));
   });
@@ -641,7 +969,11 @@ function conectarEventosGlobales() {
   $("#form-agregar").addEventListener("submit", manejarAgregarPelicula);
   $("#form-editar").addEventListener("submit", manejarEditarPelicula);
   $("#form-agregar-director").addEventListener("submit", manejarAgregarDirector);
-  // Vista previa del poster al elegir una imagen
+  $("#btn-cancelar-eliminar").addEventListener("click", cerrarConfirmacionEliminar);
+  $("#btn-confirmar-eliminar").addEventListener("click", manejarConfirmarEliminarPelicula);
+  $("#btn-cancelar-comentario").addEventListener("click", cerrarConfirmacionEliminarComentario);
+  $("#btn-confirmar-comentario").addEventListener("click", manejarConfirmarEliminarComentario);
+
   $("#poster").addEventListener("change", async (e) => {
     const archivo = e.target.files[0];
     const preview = $("#poster-preview");
@@ -656,7 +988,7 @@ function conectarEventosGlobales() {
       preview.classList.add("hidden");
     }
   });
-  // Vista previa del poster al editar una película
+
   $("#editar-poster").addEventListener("change", async (e) => {
     const archivo = e.target.files[0];
     const preview = $("#editar-poster-preview");
@@ -680,7 +1012,6 @@ function conectarEventosGlobales() {
     renderizarPeliculas();
   });
 
-  // Filtros
   let debounce;
   $("#input-busqueda").addEventListener("input", (e) => {
     clearTimeout(debounce);
@@ -702,6 +1033,7 @@ function conectarEventosGlobales() {
 }
 
 async function inicializar() {
+  aplicarTema();
   conectarEventosGlobales();
   await cargarSesion();
   renderNavAuth();
